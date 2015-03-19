@@ -8,11 +8,12 @@ char test_message[30] = "NUCLEO-F401RE TEST MESSAGE\n";
 void 	ESP8622_init( void ){
   GPIO_InitTypeDef GPIO_serial;
 
+  __USART1_CLK_ENABLE();
   __BRD_D10_GPIO_CLK();
   __BRD_D2_GPIO_CLK();
 
   /* Configure settings for USART 6 */
-  UART_Handler.Instance = (USART_TypeDef *)USART1_BASE;		//USART 6
+  UART_Handler.Instance = (USART_TypeDef *)USART1_BASE;		//USART 1
   UART_Handler.Init.BaudRate   = 9600;	             			//Baudrate
   UART_Handler.Init.WordLength = UART_WORDLENGTH_8B;    	//8 bits data length
   UART_Handler.Init.StopBits   = UART_STOPBITS_1;	      	//1 stop bit
@@ -20,7 +21,7 @@ void 	ESP8622_init( void ){
   UART_Handler.Init.Mode = UART_MODE_TX_RX;		           	//Set for Transmit and Receive mode
   UART_Handler.Init.HwFlowCtl = UART_HWCONTROL_NONE;	   	//Set HW Flow control to none.
 
-  /* Configure the D0 as the RX pin for USART6 */
+  /* Configure the D2 as the RX pin for USARt1 */
   GPIO_serial.Pin = BRD_D2_PIN;
   GPIO_serial.Mode = GPIO_MODE_AF_PP;				             	//Enable alternate mode setting
   GPIO_serial.Pull = GPIO_PULLDOWN;
