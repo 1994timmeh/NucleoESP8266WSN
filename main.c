@@ -15,18 +15,21 @@ void Hardware_init();
 
 void main(void) {
 
-	Hardware_init();	//Initalise hardware modules
-	/* Main processing loop */
-		Wifi_reset(); //Reset the module to stop any cross over when debugging
-		Wifi_setmode();
-		Wifi_listAPs();
-		Wifi_join();
+	BRD_LEDToggle();
 
-    while (1) {
-			Wifi_checkcon();
-			BRD_LEDToggle();	//Toggle 'Alive' LED on/off
-			Delay(SEC*5);	//Delay function
-  	}
+	Hardware_init();	//Initalise hardware modules
+	Wifi_reset(); 		//Reset the module to stop any cross over when debugging
+	Wifi_setmode();
+	Wifi_listAPs();
+	Wifi_join();
+
+	BRD_LEDToggle();
+
+  while (1) {
+		Wifi_checkcon();
+		BRD_LEDToggle();	//Toggle 'Alive' LED on/off
+		Delay(SEC*5);	//Delay function
+	}
 }
 
 void Hardware_init() {
@@ -35,6 +38,8 @@ void Hardware_init() {
 
 	BRD_LEDInit();		//Initialise Blue LED
 	BRD_LEDOff();		//Turn off Blue LED
+
+	debug_printf("DEBUG_PRINTF TEST\n\r");
 }
 
 void Delay(__IO unsigned long nCount) {

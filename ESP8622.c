@@ -2,7 +2,6 @@
 #include "stm32f4xx_hal_conf.h"
 #include "debug_printf.h"
 #include "ESP8622.h"
-#include <stdio.h>
 
 UART_HandleTypeDef UART_Handler;
 char test_message[30] = "NUCLEO-F401RE TEST MESSAGE\n";
@@ -52,19 +51,65 @@ void 	ESP8622_init( void ){
 /* Resets the wifi module */
 void Wifi_reset(){
   char command[20] = WIFI_CMD_RST;
+  char rx_char = 0;
+  int timeout = 0;
+
+  debug_printf("Reseting module... Please wait\n");
+
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_RST, 10);
+
+  Delay(SEC*2);
+
+  while(rx_char != 'r'){
+    if(HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000) != HAL_OK){
+      break;
+    }
+    debug_printf("%c", rx_char);
+  }
+
+  while(rx_char != 'e'){
+    if(HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000) != HAL_OK){
+      break;
+    }
+    debug_printf("%c", rx_char);
+  }
+
+  while(rx_char != 'a'){
+    if(HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000) != HAL_OK){
+      break;
+    }
+    debug_printf("%c", rx_char);
+  }
+
+  while(rx_char != 'd'){
+    if(HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000) != HAL_OK){
+      break;
+    }
+    debug_printf("%c", rx_char);
+  }
+
+  while(rx_char != 'y'){
+    if(HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000) != HAL_OK){
+      break;
+    }
+    debug_printf("%c", rx_char);
+  }
+
+  debug_printf("Module is ready\n");
 }
 
 /* Joins my home network */
 void Wifi_join(){
   char command[50] = WIFI_CMD_JOIN_TIMMY_HOME;
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_JOIN_TIMMY_HOME, 10);
+  Delay(SEC);
 }
 
 /* Currently sets mode to 3 -Both AP and ST) */
 void Wifi_setmode(){
   char command[50] = WIFI_CMD_MODE_BOTH;
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MODE_BOTH, 10);
+  Delay(SEC);
 }
 
 /* Lists the AP names in return type
@@ -75,17 +120,18 @@ void Wifi_setmode(){
  */
 void Wifi_listAPs(){
   char command[50] = WIFI_CMD_LIST_APS;
-  char rx_char[100];
+  char rx_char;
 
   debug_printf("Getting AP Names\n");
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
 
-  Delay(SEC*10);
-
-  while(HAL_UART_Receive(&UART_Handler, &(rx_char[0]), 1, 1000) == HAL_OK) {
-    debug_printf("RX %s\n\r", &rx_char);
+  while(HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000) == HAL_OK) {
+    debug_printf("%c", rx_char);
+    Delay(SEC/10);
   }
+
+  debug_printf("\nGot AP Names\n");
 
 }
 
@@ -110,6 +156,6 @@ void Wifi_setAP(){
  * @broken
  */
 void Wifi_checkcon(){
-  char command[50] = "AT+CWJAP=?\n\r";
+  char command[50] = "AT+CWJAP\n\r";
   HAL_UART_Transmit(&UART_Handler, &(command[0]), 12, 10);
 }
