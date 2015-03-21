@@ -6,6 +6,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
+#define SEC 0x7FFF00
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
@@ -16,10 +17,15 @@ void main(void) {
 
 	Hardware_init();	//Initalise hardware modules
 	/* Main processing loop */
+		Wifi_reset(); //Reset the module to stop any cross over when debugging
+		Wifi_setmode();
+		Wifi_listAPs();
+		Wifi_join();
+
     while (1) {
-			ESP8622_send_test();
+			Wifi_checkcon();
 			BRD_LEDToggle();	//Toggle 'Alive' LED on/off
-			Delay(0x7FFF00);	//Delay function
+			Delay(SEC*5);	//Delay function
   	}
 }
 

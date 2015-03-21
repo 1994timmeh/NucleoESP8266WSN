@@ -1,10 +1,18 @@
 #include "board.h"
 #include "stm32f4xx_hal_conf.h"
 #include "debug_printf.h"
+#include "ESP8622.h"
+#include <stdio.h>
 
 UART_HandleTypeDef UART_Handler;
 char test_message[30] = "NUCLEO-F401RE TEST MESSAGE\n";
 
+/**
+  * This module is for the ESP8622 'El Cheapo' Wifi Module.
+  * It uses pins D10 (TX) and D2 (RX) and Serial 1 on the NucleoF401RE DevBrd
+  *   @author Timmy Hadwen
+  *   @author Some Cunt
+  */
 void 	ESP8622_init( void ){
   GPIO_InitTypeDef GPIO_serial;
 
@@ -39,38 +47,69 @@ void 	ESP8622_init( void ){
 
   /* Initialise USART */
   HAL_UART_Init(&UART_Handler);
-
-  HAL_UART_Transmit(&UART_Handler, &(test_message[0]), 25, 100);
 }
 
-/*
- * Sends a test sequence of UART data
- */
-void ESP8622_send_test(){
-  uint8_t i, tx_count;
-  char tx_char;
-  debug_printf("Sending data\n");
-  if(HAL_UART_Transmit(&UART_Handler, &(test_message[0]), 25, 100) == HAL_BUSY)
-    debug_printf("HAL WAS BUSY\n");
+/* Resets the wifi module */
+void Wifi_reset(){
+  char command[20] = WIFI_CMD_RST;
+  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_RST, 10);
+}
 
-  if(HAL_UART_Transmit(&UART_Handler, &(test_message[0]), 25, 100) == HAL_TIMEOUT)
-    debug_printf("HAL TIMED OUT\n");
+/* Joins my home network */
+void Wifi_join(){
+  char command[50] = WIFI_CMD_JOIN_TIMMY_HOME;
+  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_JOIN_TIMMY_HOME, 10);
+}
+
+/* Currently sets mode to 3 -Both AP and ST) */
+void Wifi_setmode(){
+  char command[50] = WIFI_CMD_MODE_BOTH;
+  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MODE_BOTH, 10);
+}
+
+/* Lists the AP names in return type
+ * PROBLEMS
+ * ===============
+ * - For some reason the uart receive code wont work. Just gives 'A' once
+ * @unfinsihed
+ */
+void Wifi_listAPs(){
+  char command[50] = WIFI_CMD_LIST_APS;
+  char rx_char[100];
+
+  debug_printf("Getting AP Names\n");
+
+  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
+
+  Delay(SEC*10);
+
+  while(HAL_UART_Receive(&UART_Handler, &(rx_char[0]), 1, 1000) == HAL_OK) {
+    debug_printf("RX %s\n\r", &rx_char);
   }
 
+}
 
-void connect( void );
-void send(char* data, int len);
-//
-// tx_char = '0' + tx_count;			//Send characters '0' to '9' in ASCII
-//
-// //Transmit character
-// if (HAL_UART_Transmit(&UART_test, &tx_char, 1, 10) != HAL_OK) {
-//   debug_printf("Transmit ERROR\n\r");
-// }
-//
-// tx_count = (tx_count +1)%10;		//Only send characters '0' to '9'.
-//
-// //Check for received characters
-// if (HAL_UART_Receive(&UART_test, &rx_char, 1, 20) == HAL_OK) {
-//   debug_printf("RX %c\n\r", rx_char);
-// }
+/* Sends the status command
+ * @unfinished
+ */
+void Wifi_status(){
+  char command[50] = WIFI_CMD_STATUS;
+  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_STATUS, 10);
+}
+
+/* Sets the wifi ap
+ * @unfinsihed
+ */
+void Wifi_setAP(){
+  char command[50] = WIFI_CMD_SET_AP;
+  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SET_AP, 10);
+}
+
+/* Checks the IP address
+ * @unfinished
+ * @broken
+ */
+void Wifi_checkcon(){
+  char command[50] = "AT+CWJAP=?\n\r";
+  HAL_UART_Transmit(&UART_Handler, &(command[0]), 12, 10);
+}

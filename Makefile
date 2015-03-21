@@ -54,7 +54,7 @@ OBJS = $(SRCS:.c=.o)
 
 .PHONY: lib proj
 
-all: proj
+all: clean proj bell
 
 lib:
 	$(MAKE) -C lib
@@ -71,6 +71,9 @@ prog:
 
 pron:
 	sudo st-flash write $(PROJ_NAME).bin 0x8000000					#Program Nucleo
+
+bell:
+	say -v Bells "ding"
 
 clean:
 	rm -f *.o
