@@ -22,11 +22,12 @@ void main(void) {
 	Wifi_setmode();
 	Wifi_listAPs();
 	Wifi_join();
+	Wifi_enserver();
 
 	BRD_LEDToggle();
 
   while (1) {
-		Wifi_checkcon();
+
 		BRD_LEDToggle();	//Toggle 'Alive' LED on/off
 		Delay(SEC*5);	//Delay function
 	}

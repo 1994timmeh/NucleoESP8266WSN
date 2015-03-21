@@ -2,6 +2,7 @@
 #include "stm32f4xx_hal_conf.h"
 #include "debug_printf.h"
 #include "ESP8622.h"
+#include <string.h>
 
 UART_HandleTypeDef UART_Handler;
 char test_message[30] = "NUCLEO-F401RE TEST MESSAGE\n";
@@ -48,6 +49,26 @@ void 	ESP8622_init( void ){
   HAL_UART_Init(&UART_Handler);
 }
 
+void waitFor( char x ){
+  char rx_char = 0;
+  while(rx_char != x){
+    HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000);
+  }
+}
+
+void waitForOK(){
+  waitFor('O');
+  waitFor('K');
+}
+
+void waitForReady(){
+  waitFor('r');
+  waitFor('e');
+  waitFor('a');
+  waitFor('d');
+  waitFor('y');
+}
+
 /* Resets the wifi module */
 void Wifi_reset(){
   char command[20] = WIFI_CMD_RST;
@@ -58,57 +79,41 @@ void Wifi_reset(){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_RST, 10);
 
-  Delay(SEC*2);
+  Delay(SEC);
 
-  while(rx_char != 'r'){
-    if(HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000) != HAL_OK){
-      break;
-    }
-    debug_printf("%c", rx_char);
-  }
+  waitForReady();
 
-  while(rx_char != 'e'){
-    if(HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000) != HAL_OK){
-      break;
-    }
-    debug_printf("%c", rx_char);
-  }
+  Delay(SEC);
 
-  while(rx_char != 'a'){
-    if(HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000) != HAL_OK){
-      break;
-    }
-    debug_printf("%c", rx_char);
-  }
-
-  while(rx_char != 'd'){
-    if(HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000) != HAL_OK){
-      break;
-    }
-    debug_printf("%c", rx_char);
-  }
-
-  while(rx_char != 'y'){
-    if(HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000) != HAL_OK){
-      break;
-    }
-    debug_printf("%c", rx_char);
-  }
-
-  debug_printf("Module is ready\n");
+  debug_printf("\nModule is ready\n");
 }
 
 /* Joins my home network */
 void Wifi_join(){
   char command[50] = WIFI_CMD_JOIN_TIMMY_HOME;
+
+  debug_printf("Joining network\n");
+
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_JOIN_TIMMY_HOME, 10);
+
+  Delay(SEC);
+
+  waitForOK();
+
   Delay(SEC);
 }
 
 /* Currently sets mode to 3 -Both AP and ST) */
 void Wifi_setmode(){
   char command[50] = WIFI_CMD_MODE_BOTH;
+
+  debug_printf("Setting module mode\n");
+
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MODE_BOTH, 10);
+
+  waitFor('n');
+  waitFor('o');
+
   Delay(SEC);
 }
 
@@ -121,18 +126,17 @@ void Wifi_setmode(){
 void Wifi_listAPs(){
   char command[50] = WIFI_CMD_LIST_APS;
   char rx_char;
+  char ap_names[100];
+  int i, j;
+
+  char ap1[50]; int rssi1 = 0; int ap1c = 0; char rssi1c[10];
+  char ap2[50]; int rssi2 = 0; int ap2c = 0; char rssi2c[10];
 
   debug_printf("Getting AP Names\n");
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
 
-  while(HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000) == HAL_OK) {
-    debug_printf("%c", rx_char);
-    Delay(SEC/10);
-  }
-
-  debug_printf("\nGot AP Names\n");
-
+  waitForOK();
 }
 
 /* Sends the status command
@@ -158,4 +162,20 @@ void Wifi_setAP(){
 void Wifi_checkcon(){
   char command[50] = "AT+CWJAP\n\r";
   HAL_UART_Transmit(&UART_Handler, &(command[0]), 12, 10);
+}
+
+/*
+ * Enables a TCP server on port 8888
+ */
+void Wifi_enserver(){
+  char command[50] = WIFI_CMD_MUX_1;
+
+  debug_printf("Enabling a server on 8888\n");
+
+  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MUX_1, 10);
+  waitForOK();
+
+  memcpy(&(command[0]), WIFI_CMD_SERVE, WIFI_LEN_SERVE);
+  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
+  waitForOK();
 }
