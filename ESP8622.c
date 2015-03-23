@@ -6,7 +6,6 @@
 
 UART_HandleTypeDef UART_Handler;
 char test_message[30] = "NUCLEO-F401RE TEST MESSAGE\n";
-
 /**
   * This module is for the ESP8622 'El Cheapo' Wifi Module.
   * It uses pins D10 (TX) and D2 (RX) and Serial 1 on the NucleoF401RE DevBrd
@@ -45,6 +44,8 @@ void 	ESP8622_init( void ){
   GPIO_serial.Alternate = GPIO_AF7_USART1;		          	//Set alternate setting to USART 1
   HAL_GPIO_Init(BRD_D10_GPIO_PORT, &GPIO_serial);
 
+  __HAL_UART_ENABLE_IT(&UART_Handler, USART_IT_RXNE);
+
   /* Initialise USART */
   HAL_UART_Init(&UART_Handler);
 
@@ -69,11 +70,10 @@ void 	ESP8622_init( void ){
   */
 void USART1_IRQHandler(void)
 {
-	debug_printf("a\n");
     if ((USART1->SR & USART_FLAG_RXNE) != (uint16_t)RESET)
     {
     	// receive data here
-    	debug_printf("b\n");
+    	//debug_printf("b\n");
     }
 }
 
@@ -107,7 +107,8 @@ void USART1_IRQHandler(void)
 void waitFor( char x ){
   char rx_char = 0;
   while(rx_char != x){
-    //HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000);
+    HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000);
+
   }
 }
 

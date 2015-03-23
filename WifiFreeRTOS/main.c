@@ -14,6 +14,7 @@
 #include "stm32f4xx_hal_conf.h"
 #include "debug_printf.h"
 #include "ESP8622.h"
+#include "stddef.h"
 
 /* Scheduler includes. */
 #include "FreeRTOS.h"

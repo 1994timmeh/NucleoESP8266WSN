@@ -4,6 +4,7 @@
 #include "debug_printf.h"
 #include "ESP8622.h"
 #include "stddef.h"
+
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 #define SEC 0x7FFF00
@@ -18,6 +19,9 @@ void main(void) {
 	BRD_LEDToggle();
 
 	Hardware_init();	//Initalise hardware modules
+
+
+
 	Wifi_reset(); 		//Reset the module to stop any cross over when debugging
 	Wifi_setmode();
 	Wifi_listAPs();
