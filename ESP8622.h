@@ -47,3 +47,7 @@ void Wifi_listAPs( void );
 void Wifi_status( void );
 
 void waitFor( char x );
+
+
+//uart interrupt
+void USART1_IRQHandler(void);

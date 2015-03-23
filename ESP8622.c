@@ -47,7 +47,59 @@ void 	ESP8622_init( void ){
 
   /* Initialise USART */
   HAL_UART_Init(&UART_Handler);
+
+
+
+  // enable usart interrupt
+  HAL_NVIC_SetPriority(USART1_IRQn, 10, 0);
+  NVIC_SetVector(USART1_IRQn, (uint32_t)&USART1_IRQHandler);
+  NVIC_EnableIRQ(USART1_IRQn);
+
 }
+
+
+/********      USART receive interrupt *************/
+
+
+/**
+  * @brief  This function handles USART1 global interrupt request.
+  * @param  None
+  * @retval None
+  */
+void USART1_IRQHandler(void)
+{
+    if ((USART1->SR & USART_FLAG_RXNE) != (uint16_t)RESET)
+    {
+    	// receive data here
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/***************    end USART receive interrupt   *********/
+
+
+
+
+
+
 
 void waitFor( char x ){
   char rx_char = 0;
