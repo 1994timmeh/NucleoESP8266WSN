@@ -20,7 +20,7 @@ void 	ESP8622_init( void ){
   __BRD_D10_GPIO_CLK();
   __BRD_D2_GPIO_CLK();
 
-  /* Configure settings for USART 6 */
+  /* Configure settings for USART 1 */
   UART_Handler.Instance = (USART_TypeDef *)USART1_BASE;		//USART 1
   UART_Handler.Init.BaudRate   = 9600;	             			//Baudrate
   UART_Handler.Init.WordLength = UART_WORDLENGTH_8B;    	//8 bits data length
@@ -29,20 +29,20 @@ void 	ESP8622_init( void ){
   UART_Handler.Init.Mode = UART_MODE_TX_RX;		           	//Set for Transmit and Receive mode
   UART_Handler.Init.HwFlowCtl = UART_HWCONTROL_NONE;	   	//Set HW Flow control to none.
 
-  /* Configure the D2 as the RX pin for USARt1 */
+  /* Configure the D2 as the RX pin for USART1 */
   GPIO_serial.Pin = BRD_D2_PIN;
   GPIO_serial.Mode = GPIO_MODE_AF_PP;				             	//Enable alternate mode setting
   GPIO_serial.Pull = GPIO_PULLDOWN;
   GPIO_serial.Speed = GPIO_SPEED_HIGH;
-  GPIO_serial.Alternate = GPIO_AF7_USART1;	           		//Set alternate setting to USART 6
+  GPIO_serial.Alternate = GPIO_AF7_USART1;	           		//Set alternate setting to USART 1
   HAL_GPIO_Init(BRD_D2_GPIO_PORT, &GPIO_serial);
 
-  /* Configure the D1 as the tX pin for USART6 */
+  /* Configure the D10 as the tX pin for USART1 */
   GPIO_serial.Pin = BRD_D10_PIN;
   GPIO_serial.Mode = GPIO_MODE_AF_PP;				             	//Enable alternate mode setting
   GPIO_serial.Pull = GPIO_PULLUP;
   GPIO_serial.Speed = GPIO_SPEED_HIGH;
-  GPIO_serial.Alternate = GPIO_AF7_USART1;		          	//Set alternate setting to USART 6
+  GPIO_serial.Alternate = GPIO_AF7_USART1;		          	//Set alternate setting to USART 1
   HAL_GPIO_Init(BRD_D10_GPIO_PORT, &GPIO_serial);
 
   /* Initialise USART */
@@ -53,6 +53,7 @@ void 	ESP8622_init( void ){
   // enable usart interrupt
   HAL_NVIC_SetPriority(USART1_IRQn, 10, 0);
   NVIC_SetVector(USART1_IRQn, (uint32_t)&USART1_IRQHandler);
+  debug_printf("NVIC Vector: %d", (uint32_t)NVIC_GetVector(USART1_IRQn));
   NVIC_EnableIRQ(USART1_IRQn);
 
 }
@@ -68,9 +69,11 @@ void 	ESP8622_init( void ){
   */
 void USART1_IRQHandler(void)
 {
+	debug_printf("a\n");
     if ((USART1->SR & USART_FLAG_RXNE) != (uint16_t)RESET)
     {
     	// receive data here
+    	debug_printf("b\n");
     }
 }
 
@@ -104,7 +107,7 @@ void USART1_IRQHandler(void)
 void waitFor( char x ){
   char rx_char = 0;
   while(rx_char != x){
-    HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000);
+    //HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000);
   }
 }
 

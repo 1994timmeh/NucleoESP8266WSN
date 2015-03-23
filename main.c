@@ -3,7 +3,7 @@
 #include "stm32f4xx_hal_conf.h"
 #include "debug_printf.h"
 #include "ESP8622.h"
-
+#include "stddef.h"
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 #define SEC 0x7FFF00
