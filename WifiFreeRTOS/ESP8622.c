@@ -8,8 +8,7 @@
 #include <string.h>
 
 UART_HandleTypeDef UART_Handler;
-QueueHandle_t UARTQueue_TX;	/* Queue used */
-QueueHandle_t UARTQueue_RX;	/* Queue used */
+QueueHandle_t Data_Queue;	/* Queue used */
 
 
 char test_message[30] = "NUCLEO-F401RE TEST MESSAGE\n";
@@ -56,42 +55,16 @@ void 	ESP8622_init( void ){
   /* Initialise USART */
   HAL_UART_Init(&UART_Handler);
 
-  xTaskCreate( (void *) &UARTHandlerTX_task, (const signed char *) "UART_TX", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
-  xTaskCreate( (void *) &UARTHandlerRX_task, (const signed char *) "UART_RX", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
+  xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA_PRO", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
 
-	UARTQueue_TX = xQueueCreate(10, sizeof(UART_Message));
-  UARTQueue_RX = xQueueCreate(100, sizeof(char));
+  Data_Queue = xQueueCreate(10, sizeof(char[100]));
 }
 
-void UARTHandlerTX_task( void ) {
-  Wifi_reset();
-  Wifi_setmode();
-  Wifi_listAPs();
+/*
+ * Task for processing UART data and adding new data to a data queue
+ */
+void UART_Processor( void ){
 
-	task_loop{
-
-		//debug_printf("UART Handler Task\n\r");
-
-		/* Delay the task for 1000ms */
-		vTaskDelay(1000);
-
-	}
-}
-
-void UARTHandlerRX_task( void ) {
-
-  char rx_char = 0;
-	task_loop{
-
-    while(HAL_UART_Receive(&UART_Handler, &rx_char, 1, 3000) == HAL_OK){
-      if (UARTQueue_RX != NULL) {	/* Check if queue exists */
-        xQueueSendToFront(UARTQueue_RX, ( void * ) &rx_char, ( portTickType ) 10 );
-        debug_printf("Added charecter to RX Queue");
-  		}
-    }
-		/* Delay the task for 1000ms */
-		vTaskDelay(1000);
-	}
 }
 
 
