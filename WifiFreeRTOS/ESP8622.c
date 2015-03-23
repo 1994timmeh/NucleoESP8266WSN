@@ -7,11 +7,19 @@
 #include "ESP8622.h"
 #include <string.h>
 
+#define TRUE 1
+#define FALSE 0
+
+#define SIMULATE
+
 UART_HandleTypeDef UART_Handler;
 QueueHandle_t Data_Queue;	/* Queue used */
 
+volatile int lastTaskPassed = FALSE;
 
-char test_message[30] = "NUCLEO-F401RE TEST MESSAGE\n";
+
+char test_message[100] = "+IPD=Hellakshdfijhalsjdhfa\n";
+char ok[5] = "OK";
 
 /**
   * This module is for the ESP8622 'El Cheapo' Wifi Module.
@@ -46,7 +54,7 @@ void 	ESP8622_init( void ){
 
   /* Configure the D1 as the tX pin for USART6 */
   GPIO_serial.Pin = BRD_D10_PIN;
-  GPIO_serial.Mode = GPIO_MODE_AF_PP;				             	//Enable alternate mode setting
+  GPIO_serial.Mode = GPIO_MODE_AF_PP;				             	//Enable al/Users/tim/Downloads/11064190_10205296920015695_250169967_o.jpgternate mode setting
   GPIO_serial.Pull = GPIO_PULLUP;
   GPIO_serial.Speed = GPIO_SPEED_HIGH;
   GPIO_serial.Alternate = GPIO_AF7_USART1;		          	//Set alternate setting to USART 6
@@ -55,42 +63,50 @@ void 	ESP8622_init( void ){
   /* Initialise USART */
   HAL_UART_Init(&UART_Handler);
 
-  xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA_PRO", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
+  xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", mainLED_TASK_STACK_SIZE * 5, NULL, mainLED_PRIORITY + 1, NULL );
 
-  Data_Queue = xQueueCreate(10, sizeof(char[100]));
+  Data_Queue = xQueueCreate(5, sizeof(char[100]));
 }
 
 /*
  * Task for processing UART data and adding new data to a data queue
  */
 void UART_Processor( void ){
-
+  char new_data[100];
+    
+#ifdef SIMULATE
+    //Adds some test data to the Queue
+  xQueueSendToBack(Data_Queue, ( void * ) &(test_message[0]), ( portTickType ) 10 );
+  xQueueSendToBack(Data_Queue, ( void * ) &(ok[0]), ( portTickType ) 10 );
+#endif
+    
+  for(;;){
+      
+      if(xQueueReceive(Data_Queue, &new_data, 10)){
+        //We have new data analyze it
+        if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
+          debug_printf("Message from node: %s\n", &(new_data[5]));
+        } else if(strncmp(&(new_data[0]), "OK", 2) == 0){
+          //Set the last task passed flag
+          lastTaskPassed = TRUE;
+        } else {
+            debug_printf("New data found: %s\n", new_data);
+        }
+      }
+      vTaskDelay(1000);
+  }
 }
 
 
 //############################ HELPER FUNCTIONS ###############################
 
-void waitFor( char x ){
+void waitForPassed(){
   char rx_char = 0;
-  while(rx_char != x){
-    if(xQueueReceive( UARTQueue_RX, &rx_char, 10 )){
-      debug_printf("Found char %c\n", rx_char);
-    }
-
+  while(!lastTaskPassed){
+    vTaskDelay(1000);
   }
-}
-
-void waitForOK(){
-  waitFor('O');
-  waitFor('K');
-}
-
-void waitForReady(){
-  waitFor('r');
-  waitFor('e');
-  waitFor('a');
-  waitFor('d');
-  waitFor('y');
+    
+  lastTaskPassed = FALSE;
 }
 
 /* Resets the wifi module */
@@ -103,13 +119,9 @@ void Wifi_reset(){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_RST, 10);
 
-  Delay(SEC);
+  waitForPassed();
 
-  waitForReady();
-
-  Delay(SEC);
-
-  debug_printf("\nModule is ready\n");
+  debug_printf("Success.\n\n");
 }
 
 /* Joins my home network */
@@ -120,11 +132,9 @@ void Wifi_join(){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_JOIN_TIMMY_HOME, 10);
 
-  Delay(SEC);
+  waitForPassed();
 
-  waitForOK();
-
-  Delay(SEC);
+  debug_printf("Success.\n\n");
 }
 
 /* Currently sets mode to 3 -Both AP and ST) */
@@ -135,10 +145,9 @@ void Wifi_setmode(){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MODE_BOTH, 10);
 
-  waitFor('n');
-  waitFor('o');
+  waitForPassed();
 
-  Delay(SEC);
+  debug_printf("Success.\n\n");
 }
 
 /* Lists the AP names in return type
@@ -159,8 +168,6 @@ void Wifi_listAPs(){
   debug_printf("Getting AP Names\n");
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
-
-  waitForOK();
 }
 
 /* Sends the status command
@@ -197,13 +204,13 @@ void Wifi_enserver(){
   debug_printf("Enabling a server on 8888\n");
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MUX_1, 10);
-  waitForOK();
 
   memcpy(&(command[0]), WIFI_CMD_SERVE, WIFI_LEN_SERVE);
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
-  waitForOK();
 }
 
+// @deprectaed
 void Delay(int x){
   while(x--);
+  debug_printf("Deprecated Delay used.. Use vTaskDelay( ms )\n");
 }

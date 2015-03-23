@@ -73,8 +73,11 @@ int main( void ) {
   * @retval None
   */
 void LED_Task( void ) {
-
+    
+    Wifi_reset();
+    
 	BRD_LEDOff();
+    
 
 	for (;;) {
 
