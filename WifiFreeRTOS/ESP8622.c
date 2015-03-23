@@ -8,8 +8,7 @@
 #include <string.h>
 
 UART_HandleTypeDef UART_Handler;
-QueueHandle_t UARTQueue_TX;	/* Queue used */
-QueueHandle_t UARTQueue_RX;	/* Queue used */
+QueueHandle_t Data_Queue;	/* Queue used */
 
 
 char test_message[30] = "NUCLEO-F401RE TEST MESSAGE\n";
@@ -56,59 +55,34 @@ void 	ESP8622_init( void ){
   /* Initialise USART */
   HAL_UART_Init(&UART_Handler);
 
-//  xTaskCreate( (void *) &UARTHandlerTX_task, (const signed char *) "UART_TX", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
-  xTaskCreate( (void *) &UARTHandlerRX_task, (const signed char *) "UART_RX", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY + 1, NULL );
+  xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA_PRO", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
 
-//	UARTQueue_TX = xQueueCreate(10, sizeof(UART_Message));
-  UARTQueue_RX = xQueueCreate(5, sizeof(char[100]));
+  Data_Queue = xQueueCreate(10, sizeof(char[100]));
 }
 
-void UARTHandlerTX_task( void ) {
+/*
+ * Task for processing UART data and adding new data to a data queue
+ */
+void UART_Processor( void ){
 
-	task_loop{
-		/* Delay the task for 1000ms */
-		vTaskDelay(1000);
-	}
-}
-
-void UARTHandlerRX_task( void ) {
-  char rx_char = 0;
-  char buffer[100];
-  uint8_t buffer_count = 0;
-
-  //I am writing this in such a way that newline seperated data gets stored on a queue
-  // Hopefully.....
-	task_loop{
-    if(HAL_UART_Receive(&UART_Handler, &rx_char, 1, 10) == HAL_OK){
-      debug_printf("%c", rx_char);
-      buffer[buffer_count] = rx_char;
-      buffer_count++;
-      if(rx_char == '\n' || rx_char == 0x0D){
-        xQueueSendToBack(UARTQueue_RX, ( void * ) &buffer, ( portTickType ) 10 );
-        debug_printf("Added line (%d chars) of data to RX Queue: %s\n", buffer_count, buffer);
-        buffer_count = 0;
-      }
-    }
-	}
 }
 
 
 //############################ HELPER FUNCTIONS ###############################
 
-/**
- * @deprecated
- */
 void waitFor( char x ){
-  // char rx_char = 0;
-  // while(rx_char != x){
-  //   HAL_UART_Receive(&UART_Handler, &rx_char, 1, 10);
-  // }
+  char rx_char = 0;
+  while(rx_char != x){
+    if(xQueueReceive( UARTQueue_RX, &rx_char, 10 )){
+      debug_printf("Found char %c\n", rx_char);
+    }
+
+  }
 }
 
 void waitForOK(){
   waitFor('O');
   waitFor('K');
-  waitFor('\n');
 }
 
 void waitForReady(){
@@ -117,7 +91,6 @@ void waitForReady(){
   waitFor('a');
   waitFor('d');
   waitFor('y');
-  waitFor('\n');
 }
 
 /* Resets the wifi module */
@@ -136,7 +109,7 @@ void Wifi_reset(){
 
   Delay(SEC);
 
-  debug_printf("Success\n\n");
+  debug_printf("\nModule is ready\n");
 }
 
 /* Joins my home network */
@@ -151,7 +124,7 @@ void Wifi_join(){
 
   waitForOK();
 
-  debug_printf("Success\n\n");
+  Delay(SEC);
 }
 
 /* Currently sets mode to 3 -Both AP and ST) */
@@ -164,8 +137,6 @@ void Wifi_setmode(){
 
   waitFor('n');
   waitFor('o');
-
-  debug_printf("Success\n\n");
 
   Delay(SEC);
 }
@@ -190,8 +161,6 @@ void Wifi_listAPs(){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
 
   waitForOK();
-
-  debug_printf("Success\n\n");
 }
 
 /* Sends the status command
@@ -233,9 +202,8 @@ void Wifi_enserver(){
   memcpy(&(command[0]), WIFI_CMD_SERVE, WIFI_LEN_SERVE);
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
   waitForOK();
-
-  debug_printf("Success\n");
 }
 
 void Delay(int x){
+  while(x--);
 }

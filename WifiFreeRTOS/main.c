@@ -49,13 +49,8 @@ int main( void ) {
 	Hardware_init();
 	ESP8622_init(); //This initiates another task
 
-	Wifi_reset();
-  // Wifi_setmode();
-  // Wifi_listAPs();
-	// Wifi_join();
-
 	/* Start the task to flash the LED. */
-  xTaskCreate( (void *) &LED_Task, (const signed char *) "LED", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
+    xTaskCreate( (void *) &LED_Task, (const signed char *) "LED", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
 
 	/* Start the scheduler.
 
