@@ -43,8 +43,7 @@ typedef struct{
 #define task_loop for(;;)
 
 //Tasks
-void UARTHandlerTX_task( void );
-void UARTHandlerRX_task( void );
+void UART_Processor( void );
 
 //Starting functions
 void ESP8622_init( void );
@@ -58,5 +57,5 @@ void Wifi_listAPs( void );
 void Wifi_status( void );
 
 //Helpers
-void waitFor( char x );
+void waitForPassed();
 void Delay(int x);
