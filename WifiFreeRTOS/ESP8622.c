@@ -54,7 +54,7 @@ void 	ESP8622_init( void ){
 
   /* Configure the D1 as the tX pin for USART6 */
   GPIO_serial.Pin = BRD_D10_PIN;
-  GPIO_serial.Mode = GPIO_MODE_AF_PP;				             	//Enable al/Users/tim/Downloads/11064190_10205296920015695_250169967_o.jpgternate mode setting
+  GPIO_serial.Mode = GPIO_MODE_AF_PP;				             	//Enable alternate mode setting
   GPIO_serial.Pull = GPIO_PULLUP;
   GPIO_serial.Speed = GPIO_SPEED_HIGH;
   GPIO_serial.Alternate = GPIO_AF7_USART1;		          	//Set alternate setting to USART 6
@@ -80,19 +80,19 @@ void 	ESP8622_init( void ){
 }
 
 /*
- * Task for processing UART data and adding new data to a data queue
+ * Task for processing UART data once it has been added to Data_Queue by the
+ * interupt RX handler.
  */
 void UART_Processor( void ){
   char new_data[100];
-    
+
 #ifdef SIMULATE
     //Adds some test data to the Queue
   xQueueSendToBack(Data_Queue, ( void * ) &(test_message[0]), ( portTickType ) 10 );
   xQueueSendToBack(Data_Queue, ( void * ) &(ok[0]), ( portTickType ) 10 );
 #endif
-    
+
   for(;;){
-      
       if(xQueueReceive(Data_Queue, &new_data, 10)){
         //We have new data analyze it
         if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
@@ -108,46 +108,35 @@ void UART_Processor( void ){
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
 /*
  * Usart_1 interrupt
  */
 
 void USART1_IRQHandler(void)
 {
-	//uint8_t c;
-	// check data available
-   // if ((USART1->SR & USART_FLAG_RXNE) != (uint16_t)RESET) {
-    	// clear the flag
-    	//__HAL_USART_CLEAR_FLAG(&UART_Handler, USART_IT_RXNE);
-    	//c = USART1->DR & 0xFF;		/* don't need no HAL */
+	uint8_t c;
+	//check data available
+   if ((USART1->SR & USART_FLAG_RXNE) != (uint16_t)RESET) {
+    	//clear the flag
+    	__HAL_USART_CLEAR_FLAG(&UART_Handler, USART_IT_RXNE);
+    	c = USART1->DR & 0xFF;		/* don't need no HAL */
 
-
-    	// add to queue
-
-    //}
+      //TODO add to queue
+    }
 }
 
 
 //############################ HELPER FUNCTIONS ###############################
 
+/* Waits for "OK" to be replied from the Wifi module
+ * @warning This function is the most blocking */
 void waitForPassed(){
   char rx_char = 0;
   while(!lastTaskPassed){
     vTaskDelay(1000);
   }
-    
   lastTaskPassed = FALSE;
+  debug_printf("Success.\n\n");
 }
 
 /* Resets the wifi module */
@@ -161,8 +150,6 @@ void Wifi_reset(){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_RST, 10);
 
   waitForPassed();
-
-  debug_printf("Success.\n\n");
 }
 
 /* Joins my home network */
@@ -174,8 +161,6 @@ void Wifi_join(){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_JOIN_TIMMY_HOME, 10);
 
   waitForPassed();
-
-  debug_printf("Success.\n\n");
 }
 
 /* Currently sets mode to 3 -Both AP and ST) */
@@ -187,8 +172,6 @@ void Wifi_setmode(){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MODE_BOTH, 10);
 
   waitForPassed();
-
-  debug_printf("Success.\n\n");
 }
 
 /* Lists the AP names in return type
@@ -199,16 +182,12 @@ void Wifi_setmode(){
  */
 void Wifi_listAPs(){
   char command[50] = WIFI_CMD_LIST_APS;
-  char rx_char;
-  char ap_names[100];
-  int i, j;
-
-  char ap1[50]; int rssi1 = 0; int ap1c = 0; char rssi1c[10];
-  char ap2[50]; int rssi2 = 0; int ap2c = 0; char rssi2c[10];
 
   debug_printf("Getting AP Names\n");
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
+
+  waitForPassed();
 }
 
 /* Sends the status command
@@ -216,7 +195,10 @@ void Wifi_listAPs(){
  */
 void Wifi_status(){
   char command[50] = WIFI_CMD_STATUS;
+
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_STATUS, 10);
+
+  waitForPassed();
 }
 
 /* Sets the wifi ap
@@ -224,7 +206,10 @@ void Wifi_status(){
  */
 void Wifi_setAP(){
   char command[50] = WIFI_CMD_SET_AP;
+
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SET_AP, 10);
+
+  waitForPassed();
 }
 
 /* Checks the IP address
@@ -233,7 +218,10 @@ void Wifi_setAP(){
  */
 void Wifi_checkcon(){
   char command[50] = "AT+CWJAP\n\r";
+
   HAL_UART_Transmit(&UART_Handler, &(command[0]), 12, 10);
+
+  waitForPassed();
 }
 
 /*
@@ -246,12 +234,17 @@ void Wifi_enserver(){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MUX_1, 10);
 
+  waitForPassed();
+
   memcpy(&(command[0]), WIFI_CMD_SERVE, WIFI_LEN_SERVE);
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
+
+  waitForPassed();
 }
 
-// @deprectaed
+/* @deprectaed
+ * @replaced vTaskDelay( ms )*/
 void Delay(int x){
   while(x--);
-  debug_printf("Deprecated Delay used.. Use vTaskDelay( ms )\n");
+  debug_printf("WARNING: Deprecated Delay used.. Use vTaskDelay( ms )\n");
 }

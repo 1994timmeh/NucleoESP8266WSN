@@ -73,11 +73,12 @@ int main( void ) {
   * @retval None
   */
 void LED_Task( void ) {
-    
+
     Wifi_reset();
-    
+		Wifi_listAPs();
+
 	BRD_LEDOff();
-    
+
 
 	for (;;) {
 
@@ -86,7 +87,6 @@ void LED_Task( void ) {
 
 		/* Delay the task for 1000ms */
 		vTaskDelay(1000);
-
 	}
 }
 
