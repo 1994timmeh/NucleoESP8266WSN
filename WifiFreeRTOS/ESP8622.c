@@ -61,15 +61,18 @@ void 	ESP8622_init( void ){
   HAL_GPIO_Init(BRD_D10_GPIO_PORT, &GPIO_serial);
 
   /*  Enable RXNE interrupt on USART_1 */
-//  __HAL_UART_ENABLE_IT(&UART_Handler, USART_IT_RXNE);
+
+  // enable this to go to infinite loop, ref: esp8266.c; line 96  - 2nd time receive -> task_exit_critical
+  //__HAL_UART_ENABLE_IT(&UART_Handler, USART_IT_RXNE);
+
 
   /* Initialise USART */
   HAL_UART_Init(&UART_Handler);
 
-//  /* configure Nested Vectored Interrupt Controller for USART_1 */
-//  HAL_NVIC_SetPriority(USART1_IRQn, 10, 0);
-//  NVIC_SetVector(USART1_IRQn, (uint32_t)&UART_Handler);
-//  NVIC_EnableIRQ(USART1_IRQn);
+  /* configure Nested Vectored Interrupt Controller for USART_1 */
+  HAL_NVIC_SetPriority(USART1_IRQn, 10, 0);
+  NVIC_SetVector(USART1_IRQn, (uint32_t)&UART_Handler);
+  NVIC_EnableIRQ(USART1_IRQn);
 
   xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", mainLED_TASK_STACK_SIZE * 5, NULL, mainLED_PRIORITY + 1, NULL );
 
@@ -116,24 +119,24 @@ void UART_Processor( void ){
 
 
 
-///*
-// * Usart_1 interrupt
-// */
-//
-//void USART1_IRQHandler(void)
-//{
-//	uint8_t c;
-//	// check data available
-//    if ((USART1->SR & USART_FLAG_RXNE) != (uint16_t)RESET) {
-//    	// clear the flag
-//    	__HAL_USART_CLEAR_FLAG(&UART_Handler, USART_IT_RXNE);
-//    	c = USART1->DR & 0xFF;		/* don't need no HAL */
-//
-//
-//    	// add to queue
-//
-//    }
-//}
+/*
+ * Usart_1 interrupt
+ */
+
+void USART1_IRQHandler(void)
+{
+	//uint8_t c;
+	// check data available
+   // if ((USART1->SR & USART_FLAG_RXNE) != (uint16_t)RESET) {
+    	// clear the flag
+    	//__HAL_USART_CLEAR_FLAG(&UART_Handler, USART_IT_RXNE);
+    	//c = USART1->DR & 0xFF;		/* don't need no HAL */
+
+
+    	// add to queue
+
+    //}
+}
 
 
 //############################ HELPER FUNCTIONS ###############################
