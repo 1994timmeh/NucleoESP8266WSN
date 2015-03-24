@@ -49,5 +49,5 @@ void Wifi_status( void );
 void waitFor( char x );
 
 
-//uart interrupt
-void USART1_IRQHandler(void);
+//interrupts
+void UART1_IRQHandler(void);
