@@ -86,6 +86,9 @@ void LED_Task( void ) {
 	Wifi_enserver();
 	vTaskDelay(1000);
 
+	// Wifi_getip();
+	// vTaskDelay(1000);
+
 	BRD_LEDOff();
 
 

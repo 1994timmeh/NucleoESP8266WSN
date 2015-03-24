@@ -98,15 +98,12 @@ void UART_Processor( void ){
       if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
         //We have new data analyze it
         if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
-          debug_printf("Message from node: %s\n", &(new_data[5]));
+          debug_printf("Data: %s\n", &(new_data[5]));
         } else if(strncmp(&(new_data[0]), "OK", 2) == 0 || strncmp(&(new_data[0]), "ready", 5) == 0
     || strncmp(&(new_data[0]), "no change", 9) == 0){
           //Set the last task passed flag
           lastTaskPassed = TRUE;
-          debug_printf("OK Found - Last command success\n");
         }
-
-        debug_printf("New data found: %s\n", new_data);
       }
       vTaskDelay(100);
   }
@@ -249,6 +246,11 @@ void Wifi_checkcon(){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), 12, 10);
 }
 
+// void Wifi_getip(){
+//   char command[50] = WIFI_CMD_GET_IP;
+//   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_GET_IP, 10);
+// }
+
 /*
  * Enables a TCP server on port 8888
  */
@@ -265,6 +267,8 @@ void Wifi_enserver(){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
 
   waitForPassed();
+
+  debug_printf("Success\n\n");
 }
 
 // @deprectaed
