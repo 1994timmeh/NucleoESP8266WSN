@@ -51,7 +51,7 @@ int main( void ) {
 	ESP8622_init(); //This initiates another task
 
 	/* Start the task to flash the LED. */
-    xTaskCreate( (void *) &LED_Task, (const signed char *) "LED", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
+  xTaskCreate( (void *) &LED_Task, (const signed char *) "LED", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
 
 	/* Start the scheduler.
 
@@ -64,7 +64,7 @@ int main( void ) {
 	vTaskStartScheduler();
 
 	/* We should never get here as control is now taken by the scheduler. */
-  	return 0;
+	return 0;
 }
 
 /**
@@ -73,11 +73,21 @@ int main( void ) {
   * @retval None
   */
 void LED_Task( void ) {
-    
-    Wifi_reset();
-    
+
+  Wifi_reset();
+	vTaskDelay(1000);
+
+	Wifi_setmode();
+	vTaskDelay(1000);
+
+	Wifi_join();
+	vTaskDelay(1000);
+
+	Wifi_enserver();
+	vTaskDelay(1000);
+
 	BRD_LEDOff();
-    
+
 
 	for (;;) {
 

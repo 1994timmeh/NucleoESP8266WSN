@@ -10,8 +10,6 @@
 #define TRUE 1
 #define FALSE 0
 
-#define SIMULATE
-
 UART_HandleTypeDef UART_Handler;
 QueueHandle_t Data_Queue;	/* Queue used */
 
@@ -72,13 +70,7 @@ void 	ESP8622_init( void ){
   HAL_NVIC_EnableIRQ(USART1_IRQn);
 
 
-  if(HAL_UART_Init(&UART_Handler) != HAL_OK)
-  {
-    /* Initialization Error */
-    debug_printf("UART initialisation FAIL");
-  } else {
-	  debug_printf("UART initialisation PASS");
-  }
+  HAL_UART_Init(&UART_Handler);
 
   /*  Enable RXNE interrupt on USART_1 */
 
@@ -100,45 +92,29 @@ void 	ESP8622_init( void ){
  */
 void UART_Processor( void ){
   char new_data[100];
-    
-#ifdef SIMULATE
-    //Adds some test data to the Queue
-  xQueueSendToBack(Data_Queue, ( void * ) &(test_message[0]), ( portTickType ) 10 );
-  xQueueSendToBack(Data_Queue, ( void * ) &(ok[0]), ( portTickType ) 10 );
-#endif
-    
+
   for(;;){
-      
-      if(xQueueReceive(Data_Queue, &new_data, 10)){
+
+      if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
         //We have new data analyze it
         if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
           debug_printf("Message from node: %s\n", &(new_data[5]));
-        } else if(strncmp(&(new_data[0]), "OK", 2) == 0){
+        } else if(strncmp(&(new_data[0]), "OK", 2) == 0 || strncmp(&(new_data[0]), "ready", 5) == 0
+    || strncmp(&(new_data[0]), "no change", 9) == 0){
           //Set the last task passed flag
           lastTaskPassed = TRUE;
-        } else {
-            debug_printf("New data found: %s\n", new_data);
+          debug_printf("OK Found - Last command success\n");
         }
+
+        debug_printf("New data found: %s\n", new_data);
       }
-      vTaskDelay(1000);
+      vTaskDelay(100);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
 
 /*
  * Usart_1 interrupt
  */
-
 void UART1_IRQHandler(void)
 {
 	uint8_t c;
@@ -152,10 +128,8 @@ void UART1_IRQHandler(void)
     	// if not \n or \r add to line buffer
     	//if \n or \r & line buffer not empty -> put line buffer on queue
     	//
-
-
-
-    	 //add to queue
+      //
+  	  //add to queue
     	if (c != '\n' && c != '\r') {
     		line_buffer[line_buffer_index] = c;
     		line_buffer_index++;
@@ -164,9 +138,7 @@ void UART1_IRQHandler(void)
     			// clear line buffer
     			memset(line_buffer, 0, 100);
     			line_buffer_index = 0;
-
     	}
-
     } else {	// cleanup other flags
     	HAL_UART_IRQHandler((UART_HandleTypeDef *)&UART_Handler);
     }
@@ -186,7 +158,7 @@ void waitForPassed(){
   while(!lastTaskPassed){
     vTaskDelay(1000);
   }
-    
+
   lastTaskPassed = FALSE;
 }
 
@@ -201,6 +173,7 @@ void Wifi_reset(){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_RST, 10);
 
   waitForPassed();
+  waitForPassed(); //We have to wait for OK and then ready
 
   debug_printf("Success.\n\n");
 }
@@ -286,8 +259,12 @@ void Wifi_enserver(){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MUX_1, 10);
 
+  waitForPassed();
+
   memcpy(&(command[0]), WIFI_CMD_SERVE, WIFI_LEN_SERVE);
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
+
+  waitForPassed();
 }
 
 // @deprectaed
