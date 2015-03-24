@@ -38,6 +38,7 @@ void 	ESP8622_init( void ){
   __BRD_D2_GPIO_CLK();
 
   /* Configure settings for USART 6 */
+<<<<<<< HEAD
 //  UART_Handler.Instance = (USART_TypeDef *)USART1_BASE;		//USART 1
 //  UART_Handler.Init.BaudRate   = 9600;	             			//Baudrate
 //  UART_Handler.Init.WordLength = UART_WORDLENGTH_8B;    	//8 bits data length
@@ -46,6 +47,16 @@ void 	ESP8622_init( void ){
 //  UART_Handler.Init.Mode = UART_MODE_TX_RX;		           	//Set for Transmit and Receive mode
 //  UART_Handler.Init.HwFlowCtl = UART_HWCONTROL_NONE;	   	//Set HW Flow control to none.
 //
+=======
+  UART_Handler.Instance = (USART_TypeDef *)USART1_BASE;		//USART 1
+  UART_Handler.Init.BaudRate   = 9600;	             			//Baudrate
+  UART_Handler.Init.WordLength = UART_WORDLENGTH_8B;    	//8 bits data length
+  UART_Handler.Init.StopBits   = UART_STOPBITS_1;	      	//1 stop bit
+  UART_Handler.Init.Parity     = UART_PARITY_NONE;    		//No paraity
+  UART_Handler.Init.Mode = USART_MODE_TX_RX;		           	//Set for Transmit and Receive mode
+  UART_Handler.Init.HwFlowCtl = UART_HWCONTROL_NONE;	   	//Set HW Flow control to none.
+
+>>>>>>> c2736b622255b4d77bc02cf0b4d9669d06e79ae7
   /* Configure the D2 as the RX pin for USARt1 */
   GPIO_serial.Pin = BRD_D2_PIN;
   GPIO_serial.Mode = GPIO_MODE_AF_PP;				             	//Enable alternate mode setting
@@ -62,6 +73,7 @@ void 	ESP8622_init( void ){
   GPIO_serial.Alternate = GPIO_AF7_USART1;		          	//Set alternate setting to USART 6
   HAL_GPIO_Init(BRD_D10_GPIO_PORT, &GPIO_serial);
 
+<<<<<<< HEAD
 
   UART_Handler.Instance          = USART1;
 
@@ -119,18 +131,33 @@ void 	ESP8622_init( void ){
   //__HAL_UART_ENABLE_IT(&UART_Handler, UART_IT_ERR);
 
 
+=======
+>>>>>>> c2736b622255b4d77bc02cf0b4d9669d06e79ae7
   /* Initialise USART */
   //HAL_UART_Init(&UART_Handler);
 
+
   /* configure Nested Vectored Interrupt Controller for USART_1 */
+<<<<<<< HEAD
   //HAL_NVIC_SetPriority(USART1_IRQn, 10, 0);
   //NVIC_SetVector(USART1_IRQn, (UART_HandleTypeDef *)&UART_Handler);
   //NVIC_EnableIRQ(USART1_IRQn);
 
+=======
+  HAL_NVIC_SetPriority(USART1_IRQn, 10, 1);
+  NVIC_SetVector(USART1_IRQn, (uint32_t)&USART1_IRQHandler);
+  NVIC_EnableIRQ(USART1_IRQn);
+>>>>>>> c2736b622255b4d77bc02cf0b4d9669d06e79ae7
 
-  xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", mainLED_TASK_STACK_SIZE * 5, NULL, mainLED_PRIORITY + 1, NULL );
+  /*  Enable RXNE interrupt on USART_1 */
+  // enable this to go to infinite loop, ref: esp8266.c; line 96  - 2nd time receive -> task_exit_critical
+  __HAL_USART_ENABLE_IT(&UART_Handler, USART_IT_RXNE);
+
+  //xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", mainLED_TASK_STACK_SIZE * 5, NULL, mainLED_PRIORITY + 1, NULL );
 
   Data_Queue = xQueueCreate(5, sizeof(char[100]));
+
+  debug_printf("Wifi init success\n");
 }
 
 /*
@@ -190,6 +217,7 @@ debug_printf("rx\n\r");
 =======
 	uint8_t c;
 	//check data available
+<<<<<<< HEAD
    if ((USART1->SR & USART_FLAG_RXNE) != (uint16_t)RESET) {
     	//clear the flag
     	__HAL_USART_CLEAR_FLAG(&UART_Handler, USART_IT_RXNE);
@@ -198,6 +226,14 @@ debug_printf("rx\n\r");
       //TODO add to queue
     }
 >>>>>>> dfc7e10236e8bdc42bc03ef5096d8662e257d009
+=======
+  if ((USART1->SR & USART_FLAG_RXNE) != (uint16_t)RESET) {
+    __HAL_USART_CLEAR_FLAG(&UART_Handler, USART_IT_RXNE);
+  	c = USART1->DR & 0xFF;		/* don't need no HAL */
+    debug_printf("Data: %c\n", c);
+    //TODO add to queue
+  }
+>>>>>>> c2736b622255b4d77bc02cf0b4d9669d06e79ae7
 }
 
 
