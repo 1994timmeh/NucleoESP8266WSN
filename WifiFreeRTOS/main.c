@@ -74,8 +74,8 @@ int main( void ) {
   */
 void LED_Task( void ) {
 
-    // Wifi_reset();
-		// Wifi_listAPs();
+    Wifi_reset();
+		Wifi_listAPs();
 
 	BRD_LEDOff();
 

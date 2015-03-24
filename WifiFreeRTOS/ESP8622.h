@@ -59,6 +59,3 @@ void Wifi_status( void );
 //Helpers
 void waitForPassed();
 void Delay(int x);
-
-//Interupts
-void USART1_IRQHandler(void);
