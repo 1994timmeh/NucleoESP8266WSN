@@ -12,17 +12,18 @@ typedef struct{
 #define WIFI_CMD_MODE_BOTH  "AT+CWMODE=3\r\n"
 #define WIFI_LEN_MODE_BOTH 13
 
+#define WIFI_CMD_JOIN "AT+CWJAP=\"%s\",\"%s\"\r\n"
+
 #define WIFI_CMD_JOIN_TIMMY_HOME "AT+CWJAP=\"Hadwen AirPort\",\"5Awr2juW\"\r\n"
 #define WIFI_LEN_JOIN_TIMMY_HOME 38
 
 #define WIFI_CMD_QUIT_AP "AT+CWQAP\r\n"
 #define WIFI_LEN_QUIT_AP 10
 
-#define WIFI_CMD_SET_AP "AT+CWSAP=\"NODE0x01\",\"password\"\r\n"
-#define WIFI_LEN_SET_AP 31
-
 // Will have to stick with this format in the future to allow sprintf new data
 #define WIFI_CMD_START_TCP "AT+CIPSTART=4,\"TCP\",\"%d.%d.%d.%d\",%d\r\n"
+
+#define WIFI_CMD_SET_AP "AT+CWSAP=\"%s\",\"%s\",3,0\n\r"
 
 #define WIFI_CMD_SERVE "AT+CIPSERVER=1,8888\r\n"
 #define WIFI_LEN_SERVE 21
@@ -35,6 +36,9 @@ typedef struct{
 
 #define WIFI_CMD_STATUS "AT+CIPSTATUS\r\n"
 #define WIFI_LEN_STATUS 14
+
+#define WIFI_CMD_GET_IP "AT+CIFSR\r\n"
+#define WIFI_LEN_GET_IP 10
 
 #define mainLED_PRIORITY					( tskIDLE_PRIORITY + 2 )
 #define mainLED_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
@@ -51,10 +55,11 @@ void ESP8622_send_test( void );
 
 //Library functions
 void Wifi_reset( void );
-void Wifi_join( void );
+void Wifi_join(char SSID[50], char password[50]);
 void Wifi_setmode( void );
 void Wifi_listAPs( void );
 void Wifi_status( void );
+void Wifi_getip( void );
 
 //Helpers
 void waitForPassed();

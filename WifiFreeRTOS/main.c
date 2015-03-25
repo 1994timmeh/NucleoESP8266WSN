@@ -75,22 +75,15 @@ int main( void ) {
 void LED_Task( void ) {
 
   Wifi_reset();
-	vTaskDelay(1000);
 
 	Wifi_setmode();
-	vTaskDelay(1000);
 
-	Wifi_join();
-	vTaskDelay(1000);
+	//Wifi_join("Hadwen AirPort", "5Awr2juW");
+	Wifi_join("Wi-Fi 4G-F1AC", "4132706873");
 
 	Wifi_enserver();
-	vTaskDelay(1000);
-
-	// Wifi_getip();
-	// vTaskDelay(1000);
 
 	BRD_LEDOff();
-
 
 	for (;;) {
 
@@ -98,7 +91,7 @@ void LED_Task( void ) {
 		BRD_LEDToggle();
 
 		/* Delay the task for 1000ms */
-		vTaskDelay(1000);
+		vTaskDelay(5000);
 
 	}
 }
