@@ -21,7 +21,7 @@ typedef struct{
 #define WIFI_LEN_QUIT_AP 10
 
 // Will have to stick with this format in the future to allow sprintf new data
-#define WIFI_CMD_START_TCP "AT+CIPSTART=4,\"TCP\",\"%d.%d.%d.%d\",%d\r\n"
+#define WIFI_CMD_START_TCP "AT+CIPSTART=0,\"TCP\",\"%d.%d.%d.%d\",%d\r\n"
 
 #define WIFI_CMD_SET_AP "AT+CWSAP=\"%s\",\"%s\",3,0\n\r"
 
@@ -39,6 +39,9 @@ typedef struct{
 
 #define WIFI_CMD_GET_IP "AT+CIFSR\r\n"
 #define WIFI_LEN_GET_IP 10
+
+#define WIFI_CMD_SEND_DATA "AT+CIPSEND=0,3\r\n"
+#define WIFI_LEN_SEND_DATA 16
 
 #define mainLED_PRIORITY					( tskIDLE_PRIORITY + 2 )
 #define mainLED_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
@@ -60,9 +63,11 @@ void Wifi_setmode( void );
 void Wifi_listAPs( void );
 void Wifi_status( void );
 void Wifi_getip( void );
+void Wifi_senddata();
 
 //Helpers
-void waitForPassed();
+void waitForPassed(int timeout);
+void waitForPrompt();
 void Delay(int x);
 
 //interrupts
