@@ -150,6 +150,12 @@ void waitForPassed(int timeout){
     vTaskDelay(100);
   }
 
+  if(timeout == 0){
+    debug_printf("Failure.\n\n");
+  } else {
+    debug_printf("Success.\n\n")
+  }
+
   lastTaskPassed = FALSE;
 }
 
@@ -170,8 +176,6 @@ void Wifi_reset(){
 
   waitForPassed(100);
   waitForPassed(100); //We have to wait for OK and then ready
-
-  debug_printf("Success.\n\n");
 }
 
 /* Joins my home network */
@@ -186,9 +190,6 @@ void Wifi_join(char SSID[50], char password[50]){
 
   waitForPassed(100);
 
-  debug_printf("Success.\n\n");
-}
-
 /* Currently sets mode to 3 -Both AP and ST) */
 void Wifi_setmode(){
   char command[50] = WIFI_CMD_MODE_BOTH;
@@ -198,8 +199,6 @@ void Wifi_setmode(){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MODE_BOTH, 10);
 
   waitForPassed(100);
-
-  debug_printf("Success.\n\n");
 }
 
 /* Lists the AP names in return type
@@ -216,8 +215,6 @@ void Wifi_listAPs(){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
 
   waitForPassed(100);
-
-  debug_printf("Success.\n\n");
 }
 
 /* Sends the status command
@@ -242,8 +239,6 @@ void Wifi_setAP(char SSID[50], char password[50], uint8_t chan, uint8_t sec){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
 
   waitForPassed(100);
-
-  debug_printf("Success\n\n");
 }
 
 /* Checks the IP address
@@ -289,6 +284,4 @@ void Wifi_enserver(){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
 
   waitForPassed(100);
-
-  debug_printf("Success\n\n");
 }
