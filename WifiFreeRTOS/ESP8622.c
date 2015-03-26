@@ -138,7 +138,6 @@ void UART_Processor( void ){
 			    debug_printf("IP Address: %s\n", ip_addr_string);
 
   	    } else if (strncmp(new_data, "+CWLAP:", 7) == 0){
-  				//debug_printf("WiFi AP found: %s\n", new_data+7);
   				handle_Access_Point(new_data);
   	    }
       }
@@ -166,10 +165,6 @@ void UART1_IRQHandler(void)
   	  //add to queue
 
     	if (c != '\n' && c != '\r') {
-    		if (c == '>') {
-    			int test = 1;
-    		}
-
     		line_buffer[line_buffer_index] = c;
     		line_buffer_index++;
     	} else if (index != 0) {
@@ -200,6 +195,8 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
    debug_printf("channel: %s\n", channel);
 
    rssii = atoi(rssi);
+
+   //Testing the led thing
    if(strncmp(essid, "BigPond9FB4", 11) == 0){
      g_rssi = rssii;
    }
