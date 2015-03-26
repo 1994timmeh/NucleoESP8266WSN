@@ -20,7 +20,6 @@ typedef struct{
 #define WIFI_CMD_QUIT_AP "AT+CWQAP\r\n"
 #define WIFI_LEN_QUIT_AP 10
 
-// Will have to stick with this format in the future to allow sprintf new data
 #define WIFI_CMD_START_TCP "AT+CIPSTART=0,\"TCP\",\"%d.%d.%d.%d\",%d\r\n"
 
 #define WIFI_CMD_SET_AP "AT+CWSAP=\"%s\",\"%s\",3,0\n\r"
@@ -49,19 +48,19 @@ typedef struct{
 #define SEC 0x7FFF00
 #define task_loop for(;;)
 
-// datatypes
+// Datatypes
 typedef struct Access_Point {} Access_Point;
 
 
 
-//Tasks
+// Tasks
 void UART_Processor( void );
 
-//Starting functions
+// Starting functions
 void ESP8622_init( void );
 void ESP8622_send_test( void );
 
-//Library functions
+// Library functions
 void Wifi_reset( void );
 void Wifi_join(char SSID[50], char password[50]);
 void Wifi_setmode( void );
@@ -70,10 +69,10 @@ void Wifi_status( void );
 void Wifi_getip( void );
 void Wifi_senddata();
 
-//Helpers
+// Helpers
 void waitForPassed(int timeout);
 void waitForPrompt();
 void Delay(int x);
 
-//interrupts
+// Interrupts
 void UART1_IRQHandler(void);

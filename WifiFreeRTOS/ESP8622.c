@@ -24,9 +24,9 @@ char line_buffer[100];
 uint8_t line_buffer_index = 0;
 
 char ip_addr_string[20];
-
-
 char uart_buffer[100];
+
+int g_rssi = 10;
 
 /*				wifi AP structs */
 
@@ -115,7 +115,6 @@ void UART_Processor( void ){
   char new_data[100];
 
   for(;;){
-
       if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
         //We have new data analyze it
         if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
@@ -123,21 +122,25 @@ void UART_Processor( void ){
           debug_printf("Data: %s\n", &(new_data[5]));
           vTaskDelay(1000);
           Wifi_senddata();
+
         } else if(strncmp(&(new_data[0]), "OK", 2) == 0 || strncmp(&(new_data[0]), "ready", 5) == 0
     || strncmp(&(new_data[0]), "no change", 9) == 0 || strncmp(&(new_data[0]), "SEND OK", 7) == 0) {
         	debug_printf("w: %s\n", new_data);
           //Set the last task passed flag
           lastTaskPassed = TRUE;
+
         } else if(new_data[0] == '>'){
           prompt = TRUE;
+
         } else if (strncmp(new_data, "192.168", 7) == 0) {
         	memset(ip_addr_string, 0, 20);
-			memcpy(ip_addr_string, new_data, 20);
-			debug_printf("IP Address: %s\n", ip_addr_string);
-	    } else if (strncmp(new_data, "+CWLAP:", 7) == 0){
-				debug_printf("WiFi AP found: %s\n", new_data+7);
-				handle_Access_Point(new_data);
-	    }
+			    memcpy(ip_addr_string, new_data, 20);
+			    debug_printf("IP Address: %s\n", ip_addr_string);
+
+  	    } else if (strncmp(new_data, "+CWLAP:", 7) == 0){
+  				//debug_printf("WiFi AP found: %s\n", new_data+7);
+  				handle_Access_Point(new_data);
+  	    }
       }
       vTaskDelay(100);
   }
@@ -166,6 +169,7 @@ void UART1_IRQHandler(void)
     		if (c == '>') {
     			int test = 1;
     		}
+
     		line_buffer[line_buffer_index] = c;
     		line_buffer_index++;
     	} else if (index != 0) {
@@ -180,20 +184,25 @@ void UART1_IRQHandler(void)
 }
 
 
- void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:45:a2:ea:92",6)
-	 uint8_t zero = 0;
+void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:45:a2:ea:92",6)
+	 char zero;
 	 char essid[30];
-	 uint8_t rssi = 0;
+	 char rssi[3];
+   int rssii;
 	 char bssid[30];
-	 uint8_t channel = 0;
+	 char channel[5];
 
-	 sscanf(apString, "(%d,\"%s\",-%d,\"%s\",%d)", zero, essid, rssi, bssid, channel);
-	 debug_printf("zero: %d\n", zero);
-	 debug_printf("essid: %s\n", essid);
-	 debug_printf("rssi: %d\n", rssi);
-	 debug_printf("bssid: %d\n", bssid);
-	 debug_printf("channel: %d\n", channel);
+   //debug_printf("WiFi AP found: %s\n", apString);
+	 sscanf(apString, "+CWLAP:(%c,\"%[^\"]\",-%[^,],\"%[^\"]\",%[^)])", zero, &essid, rssi, bssid, channel);
+   debug_printf("essid: %s\n", essid);
+	 debug_printf("rssi: %s\n", rssi);
+   debug_printf("bssid: %s\n", bssid);
+   debug_printf("channel: %s\n", channel);
 
+   rssii = atoi(rssi);
+   if(strncmp(essid, "BigPond9FB4", 11) == 0){
+     g_rssi = rssii;
+   }
  }
 
 
@@ -202,13 +211,13 @@ void UART1_IRQHandler(void)
 
 void waitForPassed(int timeout){
   while(!lastTaskPassed && timeout--){
-    vTaskDelay(100);
+    vTaskDelay(1);
   }
 
   if(timeout == 0){
     debug_printf("Failure.\n\n");
   } else {
-    debug_printf("Success.\n\n")
+    debug_printf("Success.\n\n");
   }
 
   lastTaskPassed = FALSE;
@@ -229,8 +238,8 @@ void Wifi_reset(){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_RST, 10);
 
-  waitForPassed(100);
-  waitForPassed(100); //We have to wait for OK and then ready
+  waitForPassed(5000);
+  waitForPassed(5000); //We have to wait for OK and then ready
 }
 
 /* Joins my home network */
@@ -243,7 +252,8 @@ void Wifi_join(char SSID[50], char password[50]){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
 
-  waitForPassed(100);
+  waitForPassed(5000);
+}
 
 /* Currently sets mode to 3 -Both AP and ST) */
 void Wifi_setmode(){
@@ -253,7 +263,7 @@ void Wifi_setmode(){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MODE_BOTH, 10);
 
-  waitForPassed(100);
+  waitForPassed(5000);
 }
 
 /* Lists the AP names in return type
@@ -269,7 +279,7 @@ void Wifi_listAPs(){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
 
-  waitForPassed(100);
+  waitForPassed(5000);
 }
 
 /* Sends the status command
@@ -282,7 +292,6 @@ void Wifi_status(){
 
 /* Sets the wifi ap
  * @param sec 0 for no password
- * @BROKEN THIS CRASHES THE WIFI CHIP
  */
 void Wifi_setAP(char SSID[50], char password[50], uint8_t chan, uint8_t sec){
   char command[50];
@@ -293,13 +302,10 @@ void Wifi_setAP(char SSID[50], char password[50], uint8_t chan, uint8_t sec){
   len = sprintf(&(command[0]), WIFI_CMD_SET_AP, SSID, password, chan, sec);
   HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
 
-  waitForPassed(100);
+  waitForPassed(5000);
 }
 
-/* Checks the IP address
- * @unfinished
- * @broken
- */
+/* Checks the IP address */
 void Wifi_checkcon(){
   char command[50] = "AT+CWJAP\n\r";
   HAL_UART_Transmit(&UART_Handler, &(command[0]), 12, 10);
@@ -309,7 +315,7 @@ void Wifi_getip(){
   char command[50] = WIFI_CMD_GET_IP;
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_GET_IP, 10);
 
-  waitForPassed(100);
+  waitForPassed(5000);
 }
 
 void Wifi_senddata(){
@@ -319,7 +325,7 @@ void Wifi_senddata(){
   waitForPrompt();
 
   HAL_UART_Transmit(&UART_Handler, "ACK\r\n", 4, 10);
-  waitForPassed(100);
+  waitForPassed(5000);
 }
 /*
  * Enables a TCP server on port 8888
@@ -332,11 +338,11 @@ void Wifi_enserver(){
   //Set MUX to 1
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MUX_1, 10);
 
-  waitForPassed(100);
+  waitForPassed(5000);
 
   //Enable the TCP server on 8888
   memcpy(&(command[0]), WIFI_CMD_SERVE, WIFI_LEN_SERVE);
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
 
-  waitForPassed(100);
+  waitForPassed(5000);
 }

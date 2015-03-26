@@ -33,6 +33,7 @@
 void Hardware_init();
 void ApplicationIdleHook( void ); /* The idle hook is used to blink the Blue 'Alive LED' every second */
 void LED_Task( void );
+void Testing_Task( void );
 
 /* Task Priorities ------------------------------------------------------------*/
 #define mainLED_PRIORITY					( tskIDLE_PRIORITY + 2 )
@@ -40,6 +41,7 @@ void LED_Task( void );
 /* Task Stack Allocations -----------------------------------------------------*/
 #define mainLED_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
 
+extern int g_rssi;
 
 /**
   * @brief  Starts all the other tasks, then starts the scheduler.
@@ -54,6 +56,7 @@ int main( void ) {
 
 	/* Start the task to flash the LED. */
   xTaskCreate( (void *) &LED_Task, (const signed char *) "LED", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
+	xTaskCreate( (void *) &Testing_Task, (const signed char *) "TEST", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
 
 	/* Start the scheduler.
 
@@ -74,7 +77,7 @@ int main( void ) {
   * @param  None
   * @retval None
   */
-void LED_Task( void ) {
+void Testing_Task( void ) {
 	char SSID[50];
 
   Wifi_reset();
@@ -91,19 +94,21 @@ void LED_Task( void ) {
 
 	Wifi_getip();
 
-
-	BRD_LEDOff();
-
 	for (;;) {
 
 		/* Toggle LED */
-		BRD_LEDToggle();
-
 		Wifi_listAPs();
 
 		/* Delay the task for 1000ms */
 		vTaskDelay(5000);
 
+	}
+}
+
+void LED_Task( void ){
+	for(;;){
+		BRD_LEDToggle();
+		vTaskDelay(100/(g_rssi) * 30);
 	}
 }
 
