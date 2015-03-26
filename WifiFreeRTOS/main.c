@@ -82,7 +82,6 @@ void LED_Task( void ) {
 	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
 	Wifi_setmode();
 
-
 	Wifi_setAP(SSID,"password", 5, 0);
 
 	//Wifi_join("Hadwen AirPort", "5Awr2juW");
@@ -92,6 +91,7 @@ void LED_Task( void ) {
 
 	Wifi_getip();
 
+
 	BRD_LEDOff();
 
 	for (;;) {
@@ -99,8 +99,10 @@ void LED_Task( void ) {
 		/* Toggle LED */
 		BRD_LEDToggle();
 
+		Wifi_listAPs();
+
 		/* Delay the task for 1000ms */
-		vTaskDelay(1000);
+		vTaskDelay(5000);
 
 	}
 }

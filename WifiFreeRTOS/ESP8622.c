@@ -23,7 +23,37 @@ char ok[5] = "OK";
 char line_buffer[100];
 uint8_t line_buffer_index = 0;
 
+char ip_addr_string[20];
+
+
 char uart_buffer[100];
+
+/*				wifi AP structs */
+
+
+// wifi struct
+//
+//typedef struct Access_Point {
+//	int channel;
+//	char[20] ESSID;
+//	char[30] SSID;
+//	int RSSI;	// RSSI as negative
+//	Access_Point* next;
+//	Access_Point* prev;
+//}   Access_Point;
+//
+//typedef struct Access_Points {
+//	Access_Point* AP;
+//	Access_Point* HEAD;
+//	Access_Point* TAIL;
+//} APs;
+
+
+
+
+
+
+
 /**
   * This module is for the ESP8622 'El Cheapo' Wifi Module.
   * It uses pins D10 (TX) and D2 (RX) and Serial 1 on the NucleoF401RE Dev Board
@@ -89,16 +119,25 @@ void UART_Processor( void ){
       if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
         //We have new data analyze it
         if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
+        	debug_printf("1: %s\n", new_data);
           debug_printf("Data: %s\n", &(new_data[5]));
           vTaskDelay(1000);
           Wifi_senddata();
         } else if(strncmp(&(new_data[0]), "OK", 2) == 0 || strncmp(&(new_data[0]), "ready", 5) == 0
     || strncmp(&(new_data[0]), "no change", 9) == 0 || strncmp(&(new_data[0]), "SEND OK", 7) == 0) {
+        	debug_printf("w: %s\n", new_data);
           //Set the last task passed flag
           lastTaskPassed = TRUE;
         } else if(new_data[0] == '>'){
           prompt = TRUE;
-        }
+        } else if (strncmp(new_data, "192.168", 7) == 0) {
+        	memset(ip_addr_string, 0, 20);
+			memcpy(ip_addr_string, new_data, 20);
+			debug_printf("IP Address: %s\n", ip_addr_string);
+	    } else if (strncmp(new_data, "+CWLAP:", 7) == 0){
+				debug_printf("WiFi AP found: %s\n", new_data+7);
+				handle_Access_Point(new_data);
+	    }
       }
       vTaskDelay(100);
   }
@@ -122,7 +161,11 @@ void UART1_IRQHandler(void)
     	//
       //
   	  //add to queue
+
     	if (c != '\n' && c != '\r') {
+    		if (c == '>') {
+    			int test = 1;
+    		}
     		line_buffer[line_buffer_index] = c;
     		line_buffer_index++;
     	} else if (index != 0) {
@@ -137,13 +180,25 @@ void UART1_IRQHandler(void)
 }
 
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
-{
-  debug_printf("rx\n\r");
-}
+ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:45:a2:ea:92",6)
+	 uint8_t zero = 0;
+	 char essid[30];
+	 uint8_t rssi = 0;
+	 char bssid[30];
+	 uint8_t channel = 0;
+
+	 sscanf(apString, "(%d,\"%s\",-%d,\"%s\",%d)", zero, essid, rssi, bssid, channel);
+	 debug_printf("zero: %d\n", zero);
+	 debug_printf("essid: %s\n", essid);
+	 debug_printf("rssi: %d\n", rssi);
+	 debug_printf("bssid: %d\n", bssid);
+	 debug_printf("channel: %d\n", channel);
+
+ }
 
 
 //############################ HELPER FUNCTIONS ###############################
+
 
 void waitForPassed(int timeout){
   while(!lastTaskPassed && timeout--){
