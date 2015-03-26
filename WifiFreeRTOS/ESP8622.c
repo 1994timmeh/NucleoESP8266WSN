@@ -96,7 +96,7 @@ void UART_Processor( void ){
     || strncmp(&(new_data[0]), "no change", 9) == 0 || strncmp(&(new_data[0]), "SEND OK", 7) == 0) {
           //Set the last task passed flag
           lastTaskPassed = TRUE;
-        } else if(new_data[0] = '>'){
+        } else if(new_data[0] == '>'){
           prompt = TRUE;
         }
       }
@@ -168,8 +168,8 @@ void Wifi_reset(){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_RST, 10);
 
-  waitForPassed(50);
-  waitForPassed(50); //We have to wait for OK and then ready
+  waitForPassed(100);
+  waitForPassed(100); //We have to wait for OK and then ready
 
   debug_printf("Success.\n\n");
 }
@@ -184,7 +184,7 @@ void Wifi_join(char SSID[50], char password[50]){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
 
-  waitForPassed(50);
+  waitForPassed(100);
 
   debug_printf("Success.\n\n");
 }
@@ -197,7 +197,7 @@ void Wifi_setmode(){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MODE_BOTH, 10);
 
-  waitForPassed(50);
+  waitForPassed(100);
 
   debug_printf("Success.\n\n");
 }
@@ -215,7 +215,7 @@ void Wifi_listAPs(){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
 
-  waitForPassed(50);
+  waitForPassed(100);
 
   debug_printf("Success.\n\n");
 }
@@ -241,7 +241,7 @@ void Wifi_setAP(char SSID[50], char password[50], uint8_t chan, uint8_t sec){
   len = sprintf(&(command[0]), WIFI_CMD_SET_AP, SSID, password, chan, sec);
   HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
 
-  waitForPassed(50);
+  waitForPassed(100);
 
   debug_printf("Success\n\n");
 }
@@ -259,7 +259,7 @@ void Wifi_getip(){
   char command[50] = WIFI_CMD_GET_IP;
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_GET_IP, 10);
 
-  waitForPassed(50);
+  waitForPassed(100);
 }
 
 void Wifi_senddata(){
@@ -269,7 +269,7 @@ void Wifi_senddata(){
   waitForPrompt();
 
   HAL_UART_Transmit(&UART_Handler, "ACK\r\n", 4, 10);
-  waitForPassed(50);
+  waitForPassed(100);
 }
 /*
  * Enables a TCP server on port 8888
@@ -282,13 +282,13 @@ void Wifi_enserver(){
   //Set MUX to 1
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MUX_1, 10);
 
-  waitForPassed(50);
+  waitForPassed(100);
 
   //Enable the TCP server on 8888
   memcpy(&(command[0]), WIFI_CMD_SERVE, WIFI_LEN_SERVE);
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
 
-  waitForPassed(50);
+  waitForPassed(100);
 
   debug_printf("Success\n\n");
 }

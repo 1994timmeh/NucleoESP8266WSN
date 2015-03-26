@@ -15,12 +15,14 @@
 #include "debug_printf.h"
 #include "ESP8622.h"
 #include "stddef.h"
+#include <stdio.h>
 
 /* Scheduler includes. */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
 
+#define NODE_ID 1
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
@@ -73,12 +75,17 @@ int main( void ) {
   * @retval None
   */
 void LED_Task( void ) {
+	char SSID[50];
 
   Wifi_reset();
 
+	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
 	Wifi_setmode();
 
-	Wifi_join("Hadwen AirPort", "5Awr2juW");
+
+	Wifi_setAP(SSID,"password", 5, 0);
+
+	//Wifi_join("Hadwen AirPort", "5Awr2juW");
 	//Wifi_join("Wi-Fi 4G-F1AC", "4132706873");
 
 	Wifi_enserver();
