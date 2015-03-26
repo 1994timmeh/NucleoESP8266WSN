@@ -49,6 +49,11 @@ typedef struct{
 #define SEC 0x7FFF00
 #define task_loop for(;;)
 
+// datatypes
+typedef struct Access_Point {} Access_Point;
+
+
+
 //Tasks
 void UART_Processor( void );
 

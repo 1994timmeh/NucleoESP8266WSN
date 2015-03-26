@@ -78,12 +78,13 @@ void LED_Task( void ) {
 
 	Wifi_setmode();
 
-	Wifi_join("Hadwen AirPort", "5Awr2juW");
+	//Wifi_join("Hadwen AirPort", "5Awr2juW");
 	//Wifi_join("Wi-Fi 4G-F1AC", "4132706873");
 
-	Wifi_enserver();
+	//Wifi_enserver();
 
-	Wifi_getip();
+	//Wifi_getip();
+
 
 	BRD_LEDOff();
 
@@ -92,8 +93,10 @@ void LED_Task( void ) {
 		/* Toggle LED */
 		BRD_LEDToggle();
 
+		Wifi_listAPs();
+
 		/* Delay the task for 1000ms */
-		vTaskDelay(1000);
+		vTaskDelay(5000);
 
 	}
 }
