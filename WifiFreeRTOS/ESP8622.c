@@ -67,6 +67,31 @@ void 	ESP8622_init( void ){
   __USART1_CLK_ENABLE();
   __BRD_D10_GPIO_CLK();
   __BRD_D2_GPIO_CLK();
+  __BRD_D3_GPIO_CLK();
+  __BRD_D4_GPIO_CLK();
+  __BRD_D5_GPIO_CLK();
+  __BRD_D6_GPIO_CLK();
+
+  GPIO_serial.Pin = BRD_D3_PIN;
+  GPIO_serial.Mode = GPIO_MODE_OUTPUT_PP;				             	//Enable alternate mode setting
+  GPIO_serial.Pull = GPIO_PULLDOWN;
+  GPIO_serial.Speed = GPIO_SPEED_HIGH;
+  HAL_GPIO_Init(BRD_D3_GPIO_PORT, &GPIO_serial);
+
+  GPIO_serial.Pin = BRD_D4_PIN;
+  HAL_GPIO_Init(BRD_D4_GPIO_PORT, &GPIO_serial);
+
+  GPIO_serial.Pin = BRD_D5_PIN;
+  HAL_GPIO_Init(BRD_D5_GPIO_PORT, &GPIO_serial);
+
+  GPIO_serial.Pin = BRD_D6_PIN;
+  HAL_GPIO_Init(BRD_D6_GPIO_PORT, &GPIO_serial);
+
+  GPIO_serial.Pin = BRD_D7_PIN;
+  HAL_GPIO_Init(BRD_D7_GPIO_PORT, &GPIO_serial);
+
+  GPIO_serial.Pin = BRD_D8_PIN;
+  HAL_GPIO_Init(BRD_D8_GPIO_PORT, &GPIO_serial);
 
   /* Configure the D2 as the RX pin for USART1 */
   GPIO_serial.Pin = BRD_D2_PIN;
@@ -197,8 +222,13 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
    rssii = atoi(rssi);
 
    //Testing the led thing
-   if(strncmp(essid, "BigPond9FB4", 11) == 0){
-     g_rssi = rssii;
+   if(strncmp(essid, "NUCLEOWSN", 9) == 0){
+      HAL_GPIO_WritePin(BRD_D3_GPIO_PORT, BRD_D3_PIN, rssii < 67.5);
+      HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, rssii < 60);
+      HAL_GPIO_WritePin(BRD_D5_GPIO_PORT, BRD_D5_PIN, rssii < 52.5);
+      HAL_GPIO_WritePin(BRD_D6_GPIO_PORT, BRD_D6_PIN, rssii < 45);
+      HAL_GPIO_WritePin(BRD_D7_GPIO_PORT, BRD_D7_PIN, rssii < 37.5);
+      HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, rssii < 30);
    }
  }
 
