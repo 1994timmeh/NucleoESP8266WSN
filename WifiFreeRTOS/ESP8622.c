@@ -32,25 +32,26 @@ int g_rssi = 10;
 
 
 // wifi struct
-//
-//typedef struct Access_Point {
-//	int channel;
-//	char[20] ESSID;
-//	char[30] SSID;
-//	int RSSI;	// RSSI as negative
-//	Access_Point* next;
-//	Access_Point* prev;
-//}   Access_Point;
-//
-//typedef struct Access_Points {
-//	Access_Point* AP;
-//	Access_Point* HEAD;
-//	Access_Point* TAIL;
-//} APs;
 
-
-
-
+// typedef struct Access_Point {
+// 	int channel;
+// 	char[20] ESSID;
+// 	char[30] SSID;
+// 	int RSSI;	// RSSI as negative
+// 	Access_Point* next;
+// 	Access_Point* prev;
+// }   Access_Point;
+// 
+// typedef struct Access_Points {
+// 	Access_Point* AP;
+// 	Access_Point* HEAD;
+// 	Access_Point* TAIL;
+// 	uint16_t size;
+// } APs;
+// 
+// APs Access_Points;
+// Access_Points->size = 0;
+// 
 
 
 
@@ -373,3 +374,57 @@ void Wifi_enserver(){
 
   waitForPassed(5000);
 }
+
+
+
+
+/*      AP list helpers     */
+void index_Add_AP(Access_Point* access_Point, uint8_t index) {
+    uint8_t i = 0;
+    if (index == 0) {
+        // add to start
+    } else {
+        for ( i = 0; i < index+1; i++) {
+            
+        }
+    }
+}
+
+//     // AP list helpers    
+// void add_AP(Access_Point* access_Point) {
+//     // search list for bssid
+//     //if found, remove from list
+//     //
+//     uint8_t i = 0;
+//     if (index == 0) {
+//         // add to start
+//     } else {
+//         for ( i = 0; i < index+1; i++) {
+//             
+//         }
+//     }
+// }
+// 
+// void remove_AP(Access_Point* access_Point) {
+//     Access_Point* current_AP = APs->HEAD;
+//     for(int i = 0; i < APs->size; i++) {
+//         if (strncmp(current_AP, access_Point, 20) == 0) {
+//             if (i = 0) {
+//                 // first entry, change head change next
+//                 current_AP->NEXT->PREV = null;
+//                 APs->HEAD = current_AP->NEXT;
+//             }
+//             if (i = APs->size-1){
+//                 // last entry
+//                 current_AP->PREV->NEXT = null;
+//                 APs->TAIL = current_AP->PREV;
+//             }
+//             current_AP->PREV->NEXT = current_AP->NEXT;         
+//             current_AP->NEXT->PREV = current_AP->PREV;  
+//         }
+//     }
+// }
+// 
+
+
+
