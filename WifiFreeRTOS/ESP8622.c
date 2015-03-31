@@ -26,7 +26,7 @@ uint8_t line_buffer_index = 0;
 char ip_addr_string[20];
 char uart_buffer[100];
 
-int g_rssi = 10;
+extern uint32_t time;
 
 /*				wifi AP structs */
 
@@ -41,17 +41,17 @@ int g_rssi = 10;
 // 	Access_Point* next;
 // 	Access_Point* prev;
 // }   Access_Point;
-// 
+//
 // typedef struct Access_Points {
 // 	Access_Point* AP;
 // 	Access_Point* HEAD;
 // 	Access_Point* TAIL;
 // 	uint16_t size;
 // } APs;
-// 
+//
 // APs Access_Points;
 // Access_Points->size = 0;
-// 
+//
 
 
 
@@ -142,6 +142,7 @@ void UART_Processor( void ){
 
   for(;;){
       if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
+        debug_printf("LINE RX: %s\n", new_data);
         //We have new data analyze it
         if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
         	debug_printf("1: %s\n", new_data);
@@ -167,7 +168,7 @@ void UART_Processor( void ){
   				handle_Access_Point(new_data);
   	    }
       }
-      vTaskDelay(100);
+      vTaskDelay(1);
   }
 }
 
@@ -204,7 +205,6 @@ void UART1_IRQHandler(void)
     }
 }
 
-
 void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:45:a2:ea:92",6)
 	 char zero;
 	 char essid[30];
@@ -215,21 +215,23 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
 
    //debug_printf("WiFi AP found: %s\n", apString);
 	 sscanf(apString, "+CWLAP:(%c,\"%[^\"]\",-%[^,],\"%[^\"]\",%[^)])", zero, &essid, rssi, bssid, channel);
-   debug_printf("essid: %s\n", essid);
-	 debug_printf("rssi: %s\n", rssi);
-   debug_printf("bssid: %s\n", bssid);
-   debug_printf("channel: %s\n", channel);
+  //  debug_printf("essid: %s\n", essid);
+	//  debug_printf("rssi: %s\n", rssi);
+  //  debug_printf("bssid: %s\n", bssid);
+  //  debug_printf("channel: %s\n", channel);
 
    rssii = atoi(rssi);
 
    //Testing the led thing
    if(strncmp(essid, "NUCLEOWSN", 9) == 0){
-      HAL_GPIO_WritePin(BRD_D3_GPIO_PORT, BRD_D3_PIN, rssii < 67.5);
-      HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, rssii < 60);
-      HAL_GPIO_WritePin(BRD_D5_GPIO_PORT, BRD_D5_PIN, rssii < 52.5);
-      HAL_GPIO_WritePin(BRD_D6_GPIO_PORT, BRD_D6_PIN, rssii < 45);
-      HAL_GPIO_WritePin(BRD_D7_GPIO_PORT, BRD_D7_PIN, rssii < 37.5);
-      HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, rssii < 30);
+      debug_printf("RSSI: %d Distance: %f\n", rssii, RSSItoDistance(rssii));
+
+      HAL_GPIO_WritePin(BRD_D3_GPIO_PORT, BRD_D3_PIN, rssii < -67.5);
+      HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, rssii < -60);
+      HAL_GPIO_WritePin(BRD_D5_GPIO_PORT, BRD_D5_PIN, rssii < -52.5);
+      HAL_GPIO_WritePin(BRD_D6_GPIO_PORT, BRD_D6_PIN, rssii < -45);
+      HAL_GPIO_WritePin(BRD_D7_GPIO_PORT, BRD_D7_PIN, rssii < -37.5);
+      HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, rssii < -30);
    }
  }
 
@@ -303,10 +305,16 @@ void Wifi_setmode(){
 void Wifi_listAPs(){
   char command[50] = WIFI_CMD_LIST_APS;
 
-  debug_printf("Getting AP Names\n");
-
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
 
+  HAL_GPIO_WritePin(BRD_D3_GPIO_PORT, BRD_D3_PIN, 0);
+  HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, 0);
+  HAL_GPIO_WritePin(BRD_D5_GPIO_PORT, BRD_D5_PIN, 0);
+  HAL_GPIO_WritePin(BRD_D6_GPIO_PORT, BRD_D6_PIN, 0);
+  HAL_GPIO_WritePin(BRD_D7_GPIO_PORT, BRD_D7_PIN, 0);
+  HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, 0);
+
+  debug_printf("Getting AP Names\n");
   waitForPassed(5000);
 }
 
@@ -375,6 +383,35 @@ void Wifi_enserver(){
   waitForPassed(5000);
 }
 
+void Wifi_synctime(){
+  char packet[20];
+  debug_printf("Current time is %d\n", time);
+
+  Wifi_join("NUCLEOWSN2", "");
+  waitForPassed(5000);
+
+
+  sprintf(&(packet[0]), "+TIME:%d", time);
+
+}
+
+void Wifi_senddatato(int node, char data[20]){
+  char SSID[50];
+  sprintf(&(SSID[0]), "NUCLEOWSN%d", node);
+
+  Wifi_join(SSID, "");
+
+}
+
+void Wifi_processTime(char* data){
+
+}
+
+/* Returns the distance in meters */
+float RSSItoDistance(int rssi){
+  return 0.0039*rssi*rssi - 0.0935*rssi + 0.6208;
+}
+
 
 
 
@@ -385,12 +422,12 @@ void index_Add_AP(Access_Point* access_Point, uint8_t index) {
         // add to start
     } else {
         for ( i = 0; i < index+1; i++) {
-            
+
         }
     }
 }
 
-//     // AP list helpers    
+// // AP list helpers
 // void add_AP(Access_Point* access_Point) {
 //     // search list for bssid
 //     //if found, remove from list
@@ -400,11 +437,11 @@ void index_Add_AP(Access_Point* access_Point, uint8_t index) {
 //         // add to start
 //     } else {
 //         for ( i = 0; i < index+1; i++) {
-//             
+//
 //         }
 //     }
 // }
-// 
+//
 // void remove_AP(Access_Point* access_Point) {
 //     Access_Point* current_AP = APs->HEAD;
 //     for(int i = 0; i < APs->size; i++) {
@@ -419,12 +456,9 @@ void index_Add_AP(Access_Point* access_Point, uint8_t index) {
 //                 current_AP->PREV->NEXT = null;
 //                 APs->TAIL = current_AP->PREV;
 //             }
-//             current_AP->PREV->NEXT = current_AP->NEXT;         
-//             current_AP->NEXT->PREV = current_AP->PREV;  
+//             current_AP->PREV->NEXT = current_AP->NEXT;
+//             current_AP->NEXT->PREV = current_AP->PREV;
 //         }
 //     }
 // }
-// 
-
-
-
+//

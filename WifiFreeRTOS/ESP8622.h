@@ -73,6 +73,7 @@ void Wifi_senddata();
 void waitForPassed(int timeout);
 void waitForPrompt();
 void Delay(int x);
+float RSSItoDistance(int rssi);
 
 // Interrupts
 void UART1_IRQHandler(void);

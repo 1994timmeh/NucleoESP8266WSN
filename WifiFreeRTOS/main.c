@@ -34,14 +34,15 @@ void Hardware_init();
 void ApplicationIdleHook( void ); /* The idle hook is used to blink the Blue 'Alive LED' every second */
 void LED_Task( void );
 void Testing_Task( void );
+void Software_timer( void );
+
+uint32_t time = 0x00;
 
 /* Task Priorities ------------------------------------------------------------*/
 #define mainLED_PRIORITY					( tskIDLE_PRIORITY + 2 )
 
 /* Task Stack Allocations -----------------------------------------------------*/
 #define mainLED_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
-
-extern int g_rssi;
 
 /**
   * @brief  Starts all the other tasks, then starts the scheduler.
@@ -55,8 +56,8 @@ int main( void ) {
 	ESP8622_init(); //This initiates another task
 
 	/* Start the task to flash the LED. */
-  xTaskCreate( (void *) &LED_Task, (const signed char *) "LED", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
 	xTaskCreate( (void *) &Testing_Task, (const signed char *) "TEST", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
+	xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY + 1, NULL );
 
 	/* Start the scheduler.
 
@@ -90,24 +91,28 @@ void Testing_Task( void ) {
 	// //Wifi_join("Hadwen AirPort", "5Awr2juW");
 	// //Wifi_join("Wi-Fi 4G-F1AC", "4132706873");
 	//
-	// Wifi_enserver();
-	//
-	// Wifi_getip();
+	Wifi_enserver();
+	Wifi_getip();
 
 	for (;;) {
-
 		/* Toggle LED */
-		Wifi_listAPs();
+		//Wifi_listAPs();
 
 		/* Delay the task for 1000ms */
-		vTaskDelay(1);
+		vTaskDelay(1000);
 	}
 }
 
-void LED_Task( void ){
+void Software_timer( void ){
 	for(;;){
-		BRD_LEDToggle();
-		vTaskDelay(100/(g_rssi) * 30);
+		vTaskDelay(1);
+		time++;
+		if(time > 60000){
+			time = 0;
+		}
+		if(time % 1000 == 0){
+			BRD_LEDToggle();
+		}
 	}
 }
 
