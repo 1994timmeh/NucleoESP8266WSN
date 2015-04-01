@@ -36,7 +36,7 @@ void LED_Task( void );
 void Testing_Task( void );
 void Software_timer( void );
 
-uint32_t time = 0x00;
+uint32_t time = 0;
 
 /* Task Priorities ------------------------------------------------------------*/
 #define mainLED_PRIORITY					( tskIDLE_PRIORITY + 2 )
@@ -57,7 +57,7 @@ int main( void ) {
 
 	/* Start the task to flash the LED. */
 	xTaskCreate( (void *) &Testing_Task, (const signed char *) "TEST", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
-	//xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY + 1, NULL );
+	xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY + 1, NULL );
 
 	/* Start the scheduler.
 
@@ -81,26 +81,43 @@ int main( void ) {
 void Testing_Task( void ) {
 	char SSID[50];
 
-  // Wifi_reset();
-	//
-	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
+  Wifi_reset();
+
+	debug_printf("I AM NODE %d\n\n", NODE_ID);
+
 	Wifi_setmode();
 
+	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
 	Wifi_setAP(SSID,"password", 5, 0);
 
-	// //Wifi_join("Hadwen AirPort", "5Awr2juW");
-	//Wifi_join("NUCLEOWSN1", "");
+	Wifi_join("NUCLEOWSN1", "");
 
 	Wifi_enserver();
+
 	Wifi_get_station_IP();
+
+	Wifi_get_AP_IP();
+
+	Wifi_connectTCP();
+
+	Wifi_senddata();
 
 	for (;;) {
 		/* Toggle LED */
 		//Wifi_listAPs();
 
-		BRD_LEDToggle();
 		/* Delay the task for 1000ms */
 		vTaskDelay(250);
+	}
+}
+
+void Software_timer(){
+	for(;;){
+		vTaskDelay(10);
+		time++;
+		if(time % 100 == 0){
+			BRD_LEDToggle();
+		}
 	}
 }
 
@@ -126,7 +143,6 @@ void Hardware_init( void ) {
   * @retval None
   */
 void vApplicationTickHook( void ) {
-
 	BRD_LEDOff();
 }
 

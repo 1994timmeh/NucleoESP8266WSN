@@ -270,7 +270,8 @@ void Wifi_reset(){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_RST, 10);
 
   waitForPassed(5000);
-  waitForPassed(5000); //We have to wait for OK and then ready
+
+  vTaskDelay(5000);
 }
 
 /* Joins my home network */
@@ -283,7 +284,7 @@ void Wifi_join(char SSID[50], char password[50]){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
 
-  waitForPassed(10000);
+  waitForPassed(5000);
 }
 
 /* Currently sets mode to 3 -Both AP and ST) */
@@ -316,7 +317,8 @@ void Wifi_listAPs(){
   HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, 0);
 
   debug_printf("Getting AP Names\n");
-  waitForPassed(5000);
+
+  vTaskDelay(5000);
 }
 
 /* Sends the status command
@@ -386,9 +388,10 @@ void Wifi_senddata(){
   char command[50] = WIFI_CMD_SEND_DATA;
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SEND_DATA, 10);
-  waitForPrompt();
+  //waitForPrompt();
+  vTaskDelay(500);
 
-  HAL_UART_Transmit(&UART_Handler, "ACK\r\n", 4, 10);
+  HAL_UART_Transmit(&UART_Handler, "EXPLODE\r\n", 9, 10);
   waitForPassed(5000);
 }
 /*
@@ -438,6 +441,14 @@ void Wifi_connecttest(){
 
 void Wifi_checkfirmware(){
   HAL_UART_Transmit(&UART_Handler, "AT+GMR\r\n", 8, 10);
+}
+
+void Wifi_connectTCP(){
+  char command[50];
+  int len = sprintf(command, "AT+CIPSTART=0,\"TCP\",\"%d.%d.%d.%d\",%d\r\n", 192, 168, 1, 1, 8888);
+  HAL_UART_Transmit(&UART_Handler, command, len, 10);
+
+  vTaskDelay(500);
 }
 
 

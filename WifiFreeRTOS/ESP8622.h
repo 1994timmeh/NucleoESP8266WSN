@@ -36,13 +36,13 @@ typedef struct{
 #define WIFI_CMD_GET_IP_STA "AT+CIPSTA?\r\n"
 #define WIFI_LEN_GET_IP_STA 11
 
-#define WIFI_CMD_GET_IP_AP "AT+CIPAP\r\n"
-#define WIFI_LEN_GET_IP_AP 10
+#define WIFI_CMD_GET_IP_AP "AT+CIPAP?\r\n"
+#define WIFI_LEN_GET_IP_AP 11
 
 #define WIFI_CMD_SET_IP_STA "AT+CIPSTA=\"%s\"\r\n"
 #define WIFI_CMD_SET_IP_AP "AT+CIPAP=\"%s\"\r\n"
 
-#define WIFI_CMD_SEND_DATA "AT+CIPSEND=0,3\r\n"
+#define WIFI_CMD_SEND_DATA "AT+CIPSEND=0,7\r\n"
 #define WIFI_LEN_SEND_DATA 16
 
 #define mainLED_PRIORITY					( tskIDLE_PRIORITY + 2 )
@@ -71,6 +71,7 @@ void Wifi_listAPs( void );
 void Wifi_status( void );
 void Wifi_senddata();
 void Wifi_checkfirmware();
+void Wifi_connectTCP();
 
 void Wifi_get_station_IP();
 void Wifi_get_AP_IP();
