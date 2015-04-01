@@ -28,30 +28,12 @@ char uart_buffer[100];
 
 extern uint32_t time;
 
-/*				wifi AP structs */
+APs* Access_Points;
 
 
-// wifi struct
 
-// typedef struct Access_Point {
-// 	int channel;
-// 	char[20] ESSID;
-// 	char[30] SSID;
-// 	int RSSI;	// RSSI as negative
-// 	Access_Point* next;
-// 	Access_Point* prev;
-// }   Access_Point;
-//
-// typedef struct Access_Points {
-// 	Access_Point* AP;
-// 	Access_Point* HEAD;
-// 	Access_Point* TAIL;
-// 	uint16_t size;
-// } APs;
-//
-// APs Access_Points;
-// Access_Points->size = 0;
-//
+
+
 
 
 
@@ -132,6 +114,10 @@ void 	ESP8622_init( void ){
 
   xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", mainLED_TASK_STACK_SIZE * 5, NULL, mainLED_PRIORITY + 1, NULL );
   Data_Queue = xQueueCreate(20, sizeof(char[100]));
+  Access_Points = pvPortMalloc(sizeof(APs));
+  Access_Points->size = 0;
+  Access_Points->HEAD = NULL;
+  Access_Points->TAIL = NULL;
 }
 
 /*
@@ -207,18 +193,31 @@ void UART1_IRQHandler(void)
 
 void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:45:a2:ea:92",6)
 	 char zero;
-	 char essid[30];
+	 char* essid = pvPortMalloc(sizeof(char)*30);
 	 char rssi[3];
-   int rssii;
-	 char bssid[30];
+	 int rssii;
+   	 char* bssid = pvPortMalloc(sizeof(char)*30);
 	 char channel[5];
 
+
    //debug_printf("WiFi AP found: %s\n", apString);
-	 sscanf(apString, "+CWLAP:(%c,\"%[^\"]\",-%[^,],\"%[^\"]\",%[^)])", zero, &essid, rssi, bssid, channel);
+	 sscanf(apString, "+CWLAP:(%c,\"%[^\"]\",-%[^,],\"%[^\"]\",%[^)])", zero, essid, rssi, bssid, channel);
   //  debug_printf("essid: %s\n", essid);
 	//  debug_printf("rssi: %s\n", rssi);
   //  debug_printf("bssid: %s\n", bssid);
   //  debug_printf("channel: %s\n", channel);
+
+	 Access_Point* access_Point = pvPortMalloc(sizeof(Access_Point));
+	 access_Point->RSSI = atoi(rssi);
+	 access_Point->channel = atoi(channel);
+	 access_Point->ESSID = pvPortMalloc(sizeof(char)*30);
+	 access_Point->BSSID = pvPortMalloc(sizeof(char)*30);
+
+	 memcpy(access_Point->ESSID, essid, 30);
+	 memcpy(access_Point->BSSID, bssid, 30);
+
+	 add_AP(access_Point);
+	 //debug_printf("Distinct APs found: %d", Access_Points->size);
 
    rssii = atoi(rssi);
 
@@ -477,38 +476,79 @@ void index_Add_AP(Access_Point* access_Point, uint8_t index) {
     }
 }
 
-// // AP list helpers
-// void add_AP(Access_Point* access_Point) {
-//     // search list for bssid
-//     //if found, remove from list
-//     //
-//     uint8_t i = 0;
-//     if (index == 0) {
-//         // add to start
-//     } else {
-//         for ( i = 0; i < index+1; i++) {
-//
-//         }
-//     }
-// }
-//
-// void remove_AP(Access_Point* access_Point) {
-//     Access_Point* current_AP = APs->HEAD;
-//     for(int i = 0; i < APs->size; i++) {
-//         if (strncmp(current_AP, access_Point, 20) == 0) {
-//             if (i = 0) {
-//                 // first entry, change head change next
-//                 current_AP->NEXT->PREV = null;
-//                 APs->HEAD = current_AP->NEXT;
-//             }
-//             if (i = APs->size-1){
-//                 // last entry
-//                 current_AP->PREV->NEXT = null;
-//                 APs->TAIL = current_AP->PREV;
-//             }
-//             current_AP->PREV->NEXT = current_AP->NEXT;
-//             current_AP->NEXT->PREV = current_AP->PREV;
-//         }
-//     }
-// }
-//
+
+Access_Point* get_AP(char* essid) {
+	int i;
+	Access_Point* current_AP = Access_Points->HEAD;
+	for ( i = 0; i < Access_Points->size; i++) {
+		if (strncmp(current_AP->ESSID, essid, 30) == 0) {
+			return current_AP;
+		}
+		current_AP = current_AP->next;
+	}
+	return NULL;
+}
+
+
+
+/*
+ * @Brief adds access points to start of the list, removes old entries
+ * @param Access_Point* access_Point
+ */
+ void add_AP(Access_Point* access_Point) {
+    remove_AP(access_Point->BSSID);
+    /*  always add to start of list	*/
+    if (Access_Points->size == 0) {
+    	access_Point->next = NULL;
+    	access_Point->prev = NULL;
+    	Access_Points->HEAD = access_Point;
+    	Access_Points->TAIL = access_Point;
+    } else {
+    	access_Point->next = Access_Points->HEAD;
+    	access_Point->prev = NULL;
+    	Access_Points->HEAD->prev = access_Point;
+    	Access_Points->HEAD = access_Point;
+    }
+    Access_Points->size++;
+ }
+
+ /*
+  * @Brief removes access point absed on BSSID
+  * @Param char* BSSID   30 characters!!
+  */
+ void remove_AP(char* BSSID) {
+     uint8_t i = 0;
+     if (Access_Points->size != 0) {
+		Access_Point* current_AP = Access_Points->HEAD;
+		for ( i = 0; i < Access_Points->size; i++) {
+			if (strncmp(current_AP->BSSID, BSSID, 30) == 0) {
+				/*		remove from linked list		*/
+				if (current_AP->next != NULL) {
+					//Access_Point* compilerIsWrong  = current_AP->next;
+					current_AP->next->prev = current_AP->prev;
+				}
+				if (current_AP->prev != NULL) {
+					//Access_Point* compilerIsWrong2  = current_AP->prev;
+					 current_AP->prev->next = current_AP->next;
+				}
+				if (Access_Points->TAIL == current_AP) {
+					if (current_AP->prev != NULL) {
+						Access_Points->TAIL = current_AP->prev;
+					}
+				}
+				if (Access_Points->HEAD == current_AP) {
+					if (current_AP->next != NULL) {
+						Access_Points->HEAD = current_AP->next;
+					}
+				}
+				Access_Points->size--;
+				vPortFree(current_AP->BSSID);
+				vPortFree(current_AP->ESSID);
+				vPortFree(current_AP);
+			}
+			current_AP = current_AP->next;
+		}
+
+     }
+ }
+

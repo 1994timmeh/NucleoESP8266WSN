@@ -50,9 +50,25 @@ typedef struct{
 #define SEC 0x7FFF00
 #define task_loop for(;;)
 
+typedef struct Ap Access_Point;
 // Datatypes
-typedef struct Access_Point {} Access_Point;
+struct Ap {
+	int channel;
+	char* ESSID;
+	char* BSSID;
+	int RSSI;	// RSSI as negative
+	Access_Point* next;
+	Access_Point* prev;
+};
 
+
+
+typedef struct Access_Points {
+	Access_Point* AP;
+	Access_Point* HEAD;
+	Access_Point* TAIL;
+	uint16_t size;
+} APs;
 
 
 // Tasks
@@ -71,12 +87,19 @@ void Wifi_status( void );
 void Wifi_senddata(char data[50], int length);
 void Wifi_checkfirmware();
 void Wifi_connectTCP( char ip[50], int port);
-void Wifi_timesync()
+void Wifi_timesync();
 
 void Wifi_get_station_IP();
 void Wifi_get_AP_IP();
 void Wifi_set_station_IP(char* IP_Addr);
 void Wifi_set_AP_IP(char* IP_Addr);
+
+
+
+//linked list helpers
+void remove_AP(char*);
+void add_AP(Access_Point*);
+
 
 // Helpers
 void waitForPassed(int timeout);
