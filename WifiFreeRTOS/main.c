@@ -57,7 +57,7 @@ int main( void ) {
 
 	/* Start the task to flash the LED. */
 	xTaskCreate( (void *) &Testing_Task, (const signed char *) "TEST", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
-	xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY + 1, NULL );
+	//xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY + 1, NULL );
 
 	/* Start the scheduler.
 
@@ -81,18 +81,26 @@ int main( void ) {
 void Testing_Task( void ) {
 	char SSID[50];
 
-  Wifi_reset();
-
+  // Wifi_reset();
+	//
 	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
 	Wifi_setmode();
 
-	Wifi_setAP(SSID,"password", 5, 0);
-	//
-	// //Wifi_join("Hadwen AirPort", "5Awr2juW");
-	// //Wifi_join("Wi-Fi 4G-F1AC", "4132706873");
-	//
-	Wifi_enserver();
-	Wifi_getip();
+	// Wifi_setAP(SSID,"password", 5, 0);
+	// //
+	Wifi_join("Hadwen AirPort", "5Awr2juW");
+	// // //Wifi_join("Wi-Fi 4G-F1AC", "4132706873");
+	Wifi_checkfirmware();
+	Wifi_upgradefirmware();
+	Wifi_checkfirmware();
+
+	//Wifi_join("NUCLEOWSN2", "");
+
+	//Wifi_enserver();
+	//Wifi_getip();
+
+	//Wifi_connecttest();
+	//Wifi_senddata();
 
 	for (;;) {
 		/* Toggle LED */
@@ -100,19 +108,6 @@ void Testing_Task( void ) {
 
 		/* Delay the task for 1000ms */
 		vTaskDelay(1000);
-	}
-}
-
-void Software_timer( void ){
-	for(;;){
-		vTaskDelay(1);
-		time++;
-		if(time > 60000){
-			time = 0;
-		}
-		if(time % 1000 == 0){
-			BRD_LEDToggle();
-		}
 	}
 }
 

@@ -68,12 +68,14 @@ void Wifi_listAPs( void );
 void Wifi_status( void );
 void Wifi_getip( void );
 void Wifi_senddata();
+void Wifi_checkfirmware();
 
 // Helpers
 void waitForPassed(int timeout);
 void waitForPrompt();
 void Delay(int x);
 float RSSItoDistance(int rssi);
+void handle_Access_Point (char* apString);
 
 // Interrupts
 void UART1_IRQHandler(void);

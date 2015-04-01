@@ -145,6 +145,7 @@ void UART_Processor( void ){
         debug_printf("LINE RX: %s\n", new_data);
         //We have new data analyze it
         if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
+          BRD_LEDToggle();
         	debug_printf("1: %s\n", new_data);
           debug_printf("Data: %s\n", &(new_data[5]));
           vTaskDelay(1000);
@@ -240,7 +241,7 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
 
 
 void waitForPassed(int timeout){
-  while(!lastTaskPassed && timeout--){
+  while(!lastTaskPassed){
     vTaskDelay(1);
   }
 
@@ -282,7 +283,7 @@ void Wifi_join(char SSID[50], char password[50]){
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
 
-  waitForPassed(5000);
+  waitForPassed(10000);
 }
 
 /* Currently sets mode to 3 -Both AP and ST) */
@@ -401,6 +402,20 @@ void Wifi_senddatato(int node, char data[20]){
 
   Wifi_join(SSID, "");
 
+}
+
+void Wifi_connecttest(){
+  HAL_UART_Transmit(&UART_Handler, "AT+CIPSTART=0,\"TCP\",\"192.168.4.1\",8888\r\n", 40, 10);
+  waitForPassed(5000);
+}
+
+void Wifi_checkfirmware(){
+  HAL_UART_Transmit(&UART_Handler, "AT+GMR\r\n", 8, 10);
+}
+
+void Wifi_upgradefirmware(){
+  HAL_UART_Transmit(&UART_Handler, "AT+CIUPDATE\r\n", 13, 10);
+  waitForPassed(100000);
 }
 
 void Wifi_processTime(char* data){
