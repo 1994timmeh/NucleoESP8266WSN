@@ -22,7 +22,7 @@
 #include "task.h"
 #include "queue.h"
 
-#define NODE_ID 1
+#define NODE_ID 2
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
@@ -86,21 +86,13 @@ void Testing_Task( void ) {
 	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
 	Wifi_setmode();
 
-	// Wifi_setAP(SSID,"password", 5, 0);
-	// //
-	Wifi_join("Hadwen AirPort", "5Awr2juW");
-	// // //Wifi_join("Wi-Fi 4G-F1AC", "4132706873");
-	Wifi_checkfirmware();
-	Wifi_upgradefirmware();
-	Wifi_checkfirmware();
+	Wifi_setAP(SSID,"password", 5, 0);
 
-	//Wifi_join("NUCLEOWSN2", "");
+	// //Wifi_join("Hadwen AirPort", "5Awr2juW");
+	//Wifi_join("NUCLEOWSN1", "");
 
-	//Wifi_enserver();
-	//Wifi_getip();
-
-	//Wifi_connecttest();
-	//Wifi_senddata();
+	Wifi_enserver();
+	Wifi_getip();
 
 	for (;;) {
 		/* Toggle LED */
