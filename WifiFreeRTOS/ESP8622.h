@@ -71,7 +71,7 @@ void Wifi_status( void );
 void Wifi_senddata(char data[50], int length);
 void Wifi_checkfirmware();
 void Wifi_connectTCP( char ip[50], int port);
-void Wifi_timesync()
+void Wifi_timesync();
 
 void Wifi_get_station_IP();
 void Wifi_get_AP_IP();
