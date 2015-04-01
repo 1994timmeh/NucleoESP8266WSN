@@ -131,7 +131,7 @@ void 	ESP8622_init( void ){
   }
 
   xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", mainLED_TASK_STACK_SIZE * 5, NULL, mainLED_PRIORITY + 1, NULL );
-  Data_Queue = xQueueCreate(10, sizeof(char[100]));
+  Data_Queue = xQueueCreate(20, sizeof(char[100]));
 }
 
 /*
@@ -239,8 +239,11 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
 void handle_data(char* data) {
   uint8_t pipe_no = 0, length = 0;
   char message[50];
-  sscanf(data, "%d,%d%s", pipe_no, length, message);
+  memset(message, 0, 50);
+  char trash;
+  sscanf(data, "%d,%d%c%s", &pipe_no, &length, &trash, message);
   debug_printf("Received data! Pipe=%d, length=%d, message=%s\n", pipe_no, length, message);
+
 }
 
 //############################ HELPER FUNCTIONS ###############################
