@@ -148,6 +148,7 @@ void UART_Processor( void ){
           BRD_LEDToggle();
         	debug_printf("1: %s\n", new_data);
           debug_printf("Data: %s\n", &(new_data[5]));
+          handle_data(new_data+5);
           vTaskDelay(1000);
           Wifi_senddata();
 
@@ -237,6 +238,10 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
  }
 
 
+void handle_data(char* data) {
+
+}
+
 //############################ HELPER FUNCTIONS ###############################
 
 
@@ -270,7 +275,7 @@ void Wifi_reset(){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_RST, 10);
 
   waitForPassed(5000);
-  waitForPassed(5000); //We have to wait for OK and then ready
+  vTaskDelay(5000);
 }
 
 /* Joins my home network */

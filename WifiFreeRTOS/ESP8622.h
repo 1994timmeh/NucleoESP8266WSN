@@ -36,8 +36,8 @@ typedef struct{
 #define WIFI_CMD_GET_IP_STA "AT+CIPSTA?\r\n"
 #define WIFI_LEN_GET_IP_STA 11
 
-#define WIFI_CMD_GET_IP_AP "AT+CIPAP\r\n"
-#define WIFI_LEN_GET_IP_AP 10
+#define WIFI_CMD_GET_IP_AP "AT+CIPAP?\r\n"
+#define WIFI_LEN_GET_IP_AP 11
 
 #define WIFI_CMD_SET_IP_STA "AT+CIPSTA=\"%s\"\r\n"
 #define WIFI_CMD_SET_IP_AP "AT+CIPAP=\"%s\"\r\n"
