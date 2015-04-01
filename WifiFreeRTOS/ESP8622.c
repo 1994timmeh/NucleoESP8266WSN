@@ -28,13 +28,6 @@ extern uint32_t time;
 
 APs* Access_Points;
 
-
-
-
-
-
-
-
 /**
   * This module is for the ESP8622 'El Cheapo' Wifi Module.
   * It uses pins D10 (TX) and D2 (RX) and Serial 1 on the NucleoF401RE Dev Board
@@ -111,17 +104,12 @@ void 	ESP8622_init( void ){
   }
 
   xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", mainLED_TASK_STACK_SIZE * 5, NULL, mainLED_PRIORITY + 1, NULL );
-<<<<<<< HEAD
+
   Data_Queue = xQueueCreate(20, sizeof(char[100]));
   Access_Points = pvPortMalloc(sizeof(APs));
   Access_Points->size = 0;
   Access_Points->HEAD = NULL;
   Access_Points->TAIL = NULL;
-=======
-  UARTRX_Queue = xQueueCreate(20, sizeof(char[100]));
-
-  Data_Queue = xQueueCreate(5, sizeof(char[50]));
->>>>>>> cababf46a9027d4e78ac7b38e9eb9d278f5876dd
 }
 
 /*
@@ -199,10 +187,9 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
 	 char* essid = pvPortMalloc(sizeof(char)*30);
 	 char rssi[3];
 	 int rssii;
-   	 char* bssid = pvPortMalloc(sizeof(char)*30);
+   char* bssid = pvPortMalloc(sizeof(char)*30);
 	 char channel[5];
 
-<<<<<<< HEAD
 
    //debug_printf("WiFi AP found: %s\n", apString);
 	 sscanf(apString, "+CWLAP:(%c,\"%[^\"]\",-%[^,],\"%[^\"]\",%[^)])", zero, essid, rssi, bssid, channel);
@@ -223,9 +210,6 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
 	 add_AP(access_Point);
 	 //debug_printf("Distinct APs found: %d", Access_Points->size);
 
-=======
-	 sscanf(apString, "+CWLAP:(%c,\"%[^\"]\",-%[^,],\"%[^\"]\",%[^)])", zero, &essid, rssi, bssid, channel);
->>>>>>> cababf46a9027d4e78ac7b38e9eb9d278f5876dd
    rssii = atoi(rssi);
 
    //LEDBAR for signal strength
@@ -555,4 +539,3 @@ Access_Point* get_AP(char* essid) {
 
      }
  }
-

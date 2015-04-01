@@ -98,15 +98,7 @@ void Testing_Task( void ) {
 
 	Wifi_get_AP_IP();
 
-<<<<<<< HEAD
-	//Wifi_connectTCP("192.168.1.1", 8888);
 
-	//Wifi_senddata("TS:[12345]\n\r", 10);
-
-	//Wifi_senddata("TE:[Test Data]\n\r", 14);
-
-	//Wifi_timesync();
-=======
 	// Wifi_connectTCP("192.168.1.1", 8888);
 	//
 	// Wifi_senddata("TS:[12345]\n\r", 10);
@@ -114,7 +106,6 @@ void Testing_Task( void ) {
 	// Wifi_senddata("TE:[Test Data]\n\r", 14);
 
 	// Wifi_timesync();
->>>>>>> cababf46a9027d4e78ac7b38e9eb9d278f5876dd
 
 	for (;;) {
 		/* Toggle LED */
