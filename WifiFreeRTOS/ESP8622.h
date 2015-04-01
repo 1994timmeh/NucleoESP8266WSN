@@ -69,9 +69,9 @@ void Wifi_join(char SSID[50], char password[50]);
 void Wifi_setmode( void );
 void Wifi_listAPs( void );
 void Wifi_status( void );
-void Wifi_senddata();
+void Wifi_senddata(char data[50]);
 void Wifi_checkfirmware();
-void Wifi_connectTCP();
+void Wifi_connectTCP( char ip[50], int port);
 
 void Wifi_get_station_IP();
 void Wifi_get_AP_IP();
@@ -84,6 +84,7 @@ void waitForPrompt();
 void Delay(int x);
 float RSSItoDistance(int rssi);
 void handle_Access_Point (char* apString);
+void handle_data(char* data);
 
 // Interrupts
 void UART1_IRQHandler(void);

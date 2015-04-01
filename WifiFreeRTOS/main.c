@@ -98,9 +98,11 @@ void Testing_Task( void ) {
 
 	Wifi_get_AP_IP();
 
-	Wifi_connectTCP();
+	Wifi_connectTCP("192.168.1.1", 8888);
 
-	Wifi_senddata();
+	Wifi_senddata("TS:[12345]");
+
+	Wifi_senddata("TE:[Test Data]");
 
 	for (;;) {
 		/* Toggle LED */
@@ -115,6 +117,7 @@ void Software_timer(){
 	for(;;){
 		vTaskDelay(10);
 		time++;
+
 		if(time % 100 == 0){
 			BRD_LEDToggle();
 		}

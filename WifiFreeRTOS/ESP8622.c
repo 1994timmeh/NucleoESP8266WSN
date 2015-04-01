@@ -150,7 +150,6 @@ void UART_Processor( void ){
           debug_printf("Data: %s\n", &(new_data[5]));
           handle_data(new_data+5);
           vTaskDelay(1000);
-          Wifi_senddata();
 
         } else if(strncmp(&(new_data[0]), "OK", 2) == 0 || strncmp(&(new_data[0]), "ready", 5) == 0
     || strncmp(&(new_data[0]), "no change", 9) == 0 || strncmp(&(new_data[0]), "SEND OK", 7) == 0) {
@@ -239,7 +238,10 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
 
 
 void handle_data(char* data) {
-
+  uint8_t pipe_no = 0, length = 0;
+  char message[50];
+  sscanf(data, "%d,%d%s", pipe_no, length, message);
+  debug_printf("Received data! Pipe=%d, length=%d, message=%s\n", pipe_no, length, message);
 }
 
 //############################ HELPER FUNCTIONS ###############################
@@ -389,16 +391,6 @@ void Wifi_set_AP_IP(char* IP_Addr){
   waitForPassed(5000);
 }
 
-void Wifi_senddata(){
-  char command[50] = WIFI_CMD_SEND_DATA;
-
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SEND_DATA, 10);
-  //waitForPrompt();
-  vTaskDelay(500);
-
-  HAL_UART_Transmit(&UART_Handler, "EXPLODE\r\n", 9, 10);
-  waitForPassed(5000);
-}
 /*
  * Enables a TCP server on port 8888
  */
@@ -448,12 +440,25 @@ void Wifi_checkfirmware(){
   HAL_UART_Transmit(&UART_Handler, "AT+GMR\r\n", 8, 10);
 }
 
-void Wifi_connectTCP(){
+void Wifi_connectTCP( char ip[50], int port){
   char command[50];
-  int len = sprintf(command, "AT+CIPSTART=0,\"TCP\",\"%d.%d.%d.%d\",%d\r\n", 192, 168, 1, 1, 8888);
+  int len = sprintf(command, "AT+CIPSTART=0,\"TCP\",\"%s\",%d\r\n", ip, 8888);
   HAL_UART_Transmit(&UART_Handler, command, len, 10);
 
   vTaskDelay(500);
+}
+
+void Wifi_senddata(char data[50]){
+  char command[50] = WIFI_CMD_SEND_DATA;
+  char send_data[50];
+  int len = sprintf(command, "%s\n\r", data);
+
+  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SEND_DATA, 10);
+
+  vTaskDelay(500);
+
+  HAL_UART_Transmit(&UART_Handler, send_data, len, 10);
+  waitForPassed(5000);
 }
 
 
