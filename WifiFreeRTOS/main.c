@@ -100,13 +100,15 @@ void Testing_Task( void ) {
 
 	Wifi_connectTCP("192.168.1.1", 8888);
 
-	Wifi_senddata("TS:[12345]");
+	Wifi_senddata("TS:[12345]\n\r", 10);
 
-	Wifi_senddata("TE:[Test Data]");
+	Wifi_senddata("TE:[Test Data]\n\r", 14);
+
+	Wifi_timesync();
 
 	for (;;) {
 		/* Toggle LED */
-		//Wifi_listAPs();
+		Wifi_listAPs();
 
 		/* Delay the task for 1000ms */
 		vTaskDelay(250);

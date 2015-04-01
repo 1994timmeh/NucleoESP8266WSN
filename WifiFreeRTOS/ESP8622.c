@@ -226,12 +226,12 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
    if(strncmp(essid, "NUCLEOWSN", 9) == 0){
       debug_printf("RSSI: %d Distance: %f\n", rssii, RSSItoDistance(rssii));
 
-      HAL_GPIO_WritePin(BRD_D3_GPIO_PORT, BRD_D3_PIN, rssii < -67.5);
-      HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, rssii < -60);
-      HAL_GPIO_WritePin(BRD_D5_GPIO_PORT, BRD_D5_PIN, rssii < -52.5);
-      HAL_GPIO_WritePin(BRD_D6_GPIO_PORT, BRD_D6_PIN, rssii < -45);
-      HAL_GPIO_WritePin(BRD_D7_GPIO_PORT, BRD_D7_PIN, rssii < -37.5);
-      HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, rssii < -30);
+      HAL_GPIO_WritePin(BRD_D3_GPIO_PORT, BRD_D3_PIN, rssii < 67.5);
+      HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, rssii < 60);
+      HAL_GPIO_WritePin(BRD_D5_GPIO_PORT, BRD_D5_PIN, rssii < 52.5);
+      HAL_GPIO_WritePin(BRD_D6_GPIO_PORT, BRD_D6_PIN, rssii < 45);
+      HAL_GPIO_WritePin(BRD_D7_GPIO_PORT, BRD_D7_PIN, rssii < 37.5);
+      HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, rssii < 30);
    }
  }
 
@@ -317,13 +317,6 @@ void Wifi_listAPs(){
   char command[50] = WIFI_CMD_LIST_APS;
 
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
-
-  HAL_GPIO_WritePin(BRD_D3_GPIO_PORT, BRD_D3_PIN, 0);
-  HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, 0);
-  HAL_GPIO_WritePin(BRD_D5_GPIO_PORT, BRD_D5_PIN, 0);
-  HAL_GPIO_WritePin(BRD_D6_GPIO_PORT, BRD_D6_PIN, 0);
-  HAL_GPIO_WritePin(BRD_D7_GPIO_PORT, BRD_D7_PIN, 0);
-  HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, 0);
 
   debug_printf("Getting AP Names\n");
 
@@ -444,17 +437,28 @@ void Wifi_connectTCP( char ip[50], int port){
   waitForPassed(5000);
 }
 
-void Wifi_senddata(char data[50]){
-  char command[50] = WIFI_CMD_SEND_DATA;
+void Wifi_senddata(char data[50], int length){
+  char command[50];
   char send_data[50];
-  int len = sprintf(command, "%s\n\r", data);
 
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SEND_DATA, 10);
+  int len = sprintf(command, WIFI_CMD_SEND_DATA, length);
 
-  vTaskDelay(500);
+  debug_printf("Sending data\n");
+
+  HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
+
+  vTaskDelay(100);
+
+  len = sprintf(send_data, "%s\n\r", data);
 
   HAL_UART_Transmit(&UART_Handler, send_data, len, 10);
   waitForPassed(5000);
+}
+
+void Wifi_timesync(){
+  char data[25];
+  int len = sprintf(data, "TS:[%d]", time + 100 /* Some offset for time taken to send data */);
+  Wifi_senddata(data, len);
 }
 
 
@@ -462,8 +466,6 @@ void Wifi_senddata(char data[50]){
 float RSSItoDistance(int rssi){
   return 0.0039*rssi*rssi - 0.0935*rssi + 0.6208;
 }
-
-
 
 
 /*      AP list helpers     */
