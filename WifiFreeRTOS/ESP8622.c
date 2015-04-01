@@ -348,18 +348,36 @@ void Wifi_checkcon(){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), 12, 10);
 }
 
-void Wifi_GetIP(){
-  char command[50] = WIFI_CMD_GET_IP;
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_GET_IP, 10);
+void Wifi_get_station_IP(){
+  char command[50] = WIFI_CMD_GET_IP_STA;
+  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_GET_IP_STA, 10);
 
   waitForPassed(5000);
 }
 
-void Wifi_SetIP(char* IP_Addr){
+void Wifi_get_AP_IP(){
+  char command[50] = WIFI_CMD_GET_IP_AP;
+  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_GET_IP_AP, 10);
+
+  waitForPassed(5000);
+}
+
+void Wifi_set_station_IP(char* IP_Addr){
 	int len;
 	char command[50];
-	len = sprintf(command, WIFI_CMD_SET_IP, IP_Addr);
-	HAL_UART_Transmit(&UART_Handler, command, WIFI_LEN_GET_IP, 10);
+
+	len = sprintf(command, WIFI_CMD_SET_IP_STA, IP_Addr);
+	HAL_UART_Transmit(&UART_Handler, command, len, 10);
+
+  waitForPassed(5000);
+}
+
+void Wifi_set_AP_IP(char* IP_Addr){
+	int len;
+	char command[50];
+
+	len = sprintf(command, WIFI_CMD_SET_IP_AP, IP_Addr);
+	HAL_UART_Transmit(&UART_Handler, command, len, 10);
 
   waitForPassed(5000);
 }
@@ -422,14 +440,6 @@ void Wifi_checkfirmware(){
   HAL_UART_Transmit(&UART_Handler, "AT+GMR\r\n", 8, 10);
 }
 
-void Wifi_upgradefirmware(){
-  HAL_UART_Transmit(&UART_Handler, "AT+CIUPDATE\r\n", 13, 10);
-  waitForPassed(100000);
-}
-
-void Wifi_processTime(char* data){
-
-}
 
 /* Returns the distance in meters */
 float RSSItoDistance(int rssi){

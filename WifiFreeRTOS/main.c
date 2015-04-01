@@ -92,14 +92,15 @@ void Testing_Task( void ) {
 	//Wifi_join("NUCLEOWSN1", "");
 
 	Wifi_enserver();
-	Wifi_getip();
+	Wifi_station_IP();
 
 	for (;;) {
 		/* Toggle LED */
 		//Wifi_listAPs();
 
+		BRD_LEDToggle();
 		/* Delay the task for 1000ms */
-		vTaskDelay(1000);
+		vTaskDelay(500);
 	}
 }
 
