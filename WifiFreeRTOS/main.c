@@ -92,7 +92,7 @@ void Testing_Task( void ) {
 	//Wifi_join("NUCLEOWSN1", "");
 
 	Wifi_enserver();
-	Wifi_station_IP();
+	Wifi_get_station_IP();
 
 	for (;;) {
 		/* Toggle LED */
@@ -100,7 +100,7 @@ void Testing_Task( void ) {
 
 		BRD_LEDToggle();
 		/* Delay the task for 1000ms */
-		vTaskDelay(500);
+		vTaskDelay(250);
 	}
 }
 
