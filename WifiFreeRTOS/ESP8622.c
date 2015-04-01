@@ -131,7 +131,7 @@ void 	ESP8622_init( void ){
   }
 
   xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", mainLED_TASK_STACK_SIZE * 5, NULL, mainLED_PRIORITY + 1, NULL );
-  Data_Queue = xQueueCreate(5, sizeof(char[100]));
+  Data_Queue = xQueueCreate(10, sizeof(char[100]));
 }
 
 /*
@@ -149,7 +149,6 @@ void UART_Processor( void ){
         	debug_printf("1: %s\n", new_data);
           debug_printf("Data: %s\n", &(new_data[5]));
           handle_data(new_data+5);
-          vTaskDelay(1000);
 
         } else if(strncmp(&(new_data[0]), "OK", 2) == 0 || strncmp(&(new_data[0]), "ready", 5) == 0
     || strncmp(&(new_data[0]), "no change", 9) == 0 || strncmp(&(new_data[0]), "SEND OK", 7) == 0) {
@@ -278,7 +277,7 @@ void Wifi_reset(){
 
   waitForPassed(5000);
 
-  vTaskDelay(5000);
+  waitForPassed(5000);
 }
 
 /* Joins my home network */
@@ -325,7 +324,7 @@ void Wifi_listAPs(){
 
   debug_printf("Getting AP Names\n");
 
-  vTaskDelay(5000);
+  waitForPassed(5000);
 }
 
 /* Sends the status command
@@ -423,14 +422,6 @@ void Wifi_synctime(){
 
 }
 
-void Wifi_senddatato(int node, char data[20]){
-  char SSID[50];
-  sprintf(&(SSID[0]), "NUCLEOWSN%d", node);
-
-  Wifi_join(SSID, "");
-
-}
-
 void Wifi_connecttest(){
   HAL_UART_Transmit(&UART_Handler, "AT+CIPSTART=0,\"TCP\",\"192.168.4.1\",8888\r\n", 40, 10);
   waitForPassed(5000);
@@ -438,6 +429,8 @@ void Wifi_connecttest(){
 
 void Wifi_checkfirmware(){
   HAL_UART_Transmit(&UART_Handler, "AT+GMR\r\n", 8, 10);
+
+  waitForPassed(5000);
 }
 
 void Wifi_connectTCP( char ip[50], int port){
@@ -445,7 +438,7 @@ void Wifi_connectTCP( char ip[50], int port){
   int len = sprintf(command, "AT+CIPSTART=0,\"TCP\",\"%s\",%d\r\n", ip, 8888);
   HAL_UART_Transmit(&UART_Handler, command, len, 10);
 
-  vTaskDelay(500);
+  waitForPassed(5000);
 }
 
 void Wifi_senddata(char data[50]){
