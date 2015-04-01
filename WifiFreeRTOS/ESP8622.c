@@ -148,6 +148,7 @@ void UART_Processor( void ){
           BRD_LEDToggle();
         	debug_printf("1: %s\n", new_data);
           debug_printf("Data: %s\n", &(new_data[5]));
+          handle_data(new_data+5);
           vTaskDelay(1000);
           Wifi_senddata();
 
@@ -236,6 +237,10 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
    }
  }
 
+
+void handle_data(char* data) {
+
+}
 
 //############################ HELPER FUNCTIONS ###############################
 
