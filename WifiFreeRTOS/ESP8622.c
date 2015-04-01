@@ -216,16 +216,10 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
 	 char bssid[30];
 	 char channel[5];
 
-   //debug_printf("WiFi AP found: %s\n", apString);
 	 sscanf(apString, "+CWLAP:(%c,\"%[^\"]\",-%[^,],\"%[^\"]\",%[^)])", zero, &essid, rssi, bssid, channel);
-  //  debug_printf("essid: %s\n", essid);
-	//  debug_printf("rssi: %s\n", rssi);
-  //  debug_printf("bssid: %s\n", bssid);
-  //  debug_printf("channel: %s\n", channel);
-
    rssii = atoi(rssi);
 
-   //Testing the led thing
+   //LEDBAR for signal strength
    if(strncmp(essid, "NUCLEOWSN", 9) == 0){
       debug_printf("RSSI: %d Distance: %f\n", rssii, RSSItoDistance(rssii));
 
@@ -249,7 +243,7 @@ void handle_data(char* data) {
     sscanf(message, "TS:[%[^]]]", new_time);
     time = new_time;
   } else if(strncmp(message, "TE:[", 4) == 0){
-    //New data got
+    debug_printf("Message received: %s\n", message + 4);
   }
 }
 
