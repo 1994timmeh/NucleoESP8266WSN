@@ -12,6 +12,7 @@
 #define FALSE 0
 
 UART_HandleTypeDef UART_Handler;
+QueueHandle_t UARTRX_Queue;	/* Queue used */
 QueueHandle_t Data_Queue;	/* Queue used */
 
 volatile int lastTaskPassed = FALSE;
@@ -113,11 +114,17 @@ void 	ESP8622_init( void ){
   }
 
   xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", mainLED_TASK_STACK_SIZE * 5, NULL, mainLED_PRIORITY + 1, NULL );
+<<<<<<< HEAD
   Data_Queue = xQueueCreate(20, sizeof(char[100]));
   Access_Points = pvPortMalloc(sizeof(APs));
   Access_Points->size = 0;
   Access_Points->HEAD = NULL;
   Access_Points->TAIL = NULL;
+=======
+  UARTRX_Queue = xQueueCreate(20, sizeof(char[100]));
+
+  Data_Queue = xQueueCreate(5, sizeof(char[50]));
+>>>>>>> cababf46a9027d4e78ac7b38e9eb9d278f5876dd
 }
 
 /*
@@ -127,7 +134,7 @@ void UART_Processor( void ){
   char new_data[100];
 
   for(;;){
-      if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
+      if(xQueueReceive(UARTRX_Queue, &new_data, 10) && new_data[0] != '\r'){
         debug_printf("LINE RX: %s\n", new_data);
         //We have new data analyze it
         if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
@@ -181,7 +188,7 @@ void UART1_IRQHandler(void)
     		line_buffer[line_buffer_index] = c;
     		line_buffer_index++;
     	} else if (index != 0) {
-    			xQueueSendToBackFromISR(Data_Queue, line_buffer, ( portTickType ) 4 );
+    			xQueueSendToBackFromISR(UARTRX_Queue, line_buffer, ( portTickType ) 4 );
     			// clear line buffer
     			memset(line_buffer, 0, 100);
     			line_buffer_index = 0;
@@ -199,6 +206,7 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
    	 char* bssid = pvPortMalloc(sizeof(char)*30);
 	 char channel[5];
 
+<<<<<<< HEAD
 
    //debug_printf("WiFi AP found: %s\n", apString);
 	 sscanf(apString, "+CWLAP:(%c,\"%[^\"]\",-%[^,],\"%[^\"]\",%[^)])", zero, essid, rssi, bssid, channel);
@@ -219,9 +227,12 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
 	 add_AP(access_Point);
 	 //debug_printf("Distinct APs found: %d", Access_Points->size);
 
+=======
+	 sscanf(apString, "+CWLAP:(%c,\"%[^\"]\",-%[^,],\"%[^\"]\",%[^)])", zero, &essid, rssi, bssid, channel);
+>>>>>>> cababf46a9027d4e78ac7b38e9eb9d278f5876dd
    rssii = atoi(rssi);
 
-   //Testing the led thing
+   //LEDBAR for signal strength
    if(strncmp(essid, "NUCLEOWSN", 9) == 0){
       debug_printf("RSSI: %d Distance: %f\n", rssii, RSSItoDistance(rssii));
 
@@ -238,8 +249,15 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
 void handle_data(char* data) {
   uint8_t pipe_no = 0, length = 0;
   char message[50];
-  sscanf(data, "%d,%d%s", pipe_no, length, message);
-  debug_printf("Received data! Pipe=%d, length=%d, message=%s\n", pipe_no, length, message);
+  sscanf(data, "%d,%d:%s\n", pipe_no, length, message);
+  //debug_printf("Received data! Pipe=%d, length=%d, message=%s\n", pipe_no, length, message);
+  if(strncmp(message, "TS:[", 4) == 0){
+    char new_time[10];
+    sscanf(message, "TS:[%[^]]]", new_time);
+    time = new_time;
+  } else if(strncmp(message, "TE:[", 4) == 0){
+    debug_printf("Message received: %s\n", message + 4);
+  }
 }
 
 //############################ HELPER FUNCTIONS ###############################
@@ -453,7 +471,7 @@ void Wifi_senddata(char data[50], int length){
 
 void Wifi_timesync(){
   char data[25];
-  int len = sprintf(data, "TS:[%d]", time + 100 /* Some offset for time taken to send data */);
+  int len = sprintf(data, "TS:[%d]", time + 100);
   Wifi_senddata(data, len);
 }
 
