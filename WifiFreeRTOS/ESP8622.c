@@ -18,9 +18,6 @@ QueueHandle_t Data_Queue;	/* Queue used */
 volatile int lastTaskPassed = FALSE;
 volatile int prompt = FALSE;
 
-
-char test_message[100] = "+IPD=Hellakshdfijhalsjdhfa\n";
-char ok[5] = "OK";
 char line_buffer[100];
 uint8_t line_buffer_index = 0;
 
@@ -145,7 +142,6 @@ void UART_Processor( void ){
 
         } else if(strncmp(&(new_data[0]), "OK", 2) == 0 || strncmp(&(new_data[0]), "ready", 5) == 0
     || strncmp(&(new_data[0]), "no change", 9) == 0 || strncmp(&(new_data[0]), "SEND OK", 7) == 0) {
-        	debug_printf("w: %s\n", new_data);
           //Set the last task passed flag
           lastTaskPassed = TRUE;
 
@@ -335,6 +331,8 @@ void Wifi_listAPs(){
   debug_printf("Getting AP Names\n");
 
   waitForPassed(5000);
+
+  vTaskDelay(1000);
 }
 
 /* Sends the status command
@@ -418,18 +416,6 @@ void Wifi_enserver(){
   HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
 
   waitForPassed(5000);
-}
-
-void Wifi_synctime(){
-  char packet[20];
-  debug_printf("Current time is %d\n", time);
-
-  Wifi_join("NUCLEOWSN2", "");
-  waitForPassed(5000);
-
-
-  sprintf(&(packet[0]), "+TIME:%d", time);
-
 }
 
 void Wifi_connecttest(){
