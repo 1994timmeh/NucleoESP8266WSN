@@ -39,6 +39,9 @@ typedef struct{
 #define WIFI_CMD_GET_IP "AT+CIFSR\r\n"
 #define WIFI_LEN_GET_IP 10
 
+#define WIFI_CMD_SET_IP "AT+CIFSR=\"%s\"\r\n"
+#define WIFI_LEN_SET_IP 10
+
 #define WIFI_CMD_SEND_DATA "AT+CIPSEND=0,3\r\n"
 #define WIFI_LEN_SEND_DATA 16
 
