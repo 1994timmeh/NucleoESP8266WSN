@@ -234,7 +234,7 @@ void handle_data(char* data) {
   if(strncmp(message, "TS:[", 4) == 0){
     char new_time[10];
     sscanf(message, "TS:[%[^]]]", new_time);
-    time = new_time;
+    time = (uint32_t)new_time;
   } else if(strncmp(message, "TE:[", 4) == 0){
     debug_printf("Message received: %s\n", message + 4);
   }
@@ -361,26 +361,26 @@ void Wifi_get_AP_IP(){
 
   waitForPassed(5000);
 }
-
-void Wifi_set_station_IP(char* IP_Addr){
-	int len;
-	char command[50];
-
-	len = sprintf(command, WIFI_CMD_SET_IP_STA, IP_Addr);
-	HAL_UART_Transmit(&UART_Handler, command, len, 10);
-
-  waitForPassed(5000);
-}
-
-void Wifi_set_AP_IP(char* IP_Addr){
-	int len;
-	char command[50];
-
-	len = sprintf(command, WIFI_CMD_SET_IP_AP, IP_Addr);
-	HAL_UART_Transmit(&UART_Handler, command, len, 10);
-
-  waitForPassed(5000);
-}
+//
+// void Wifi_set_station_IP(char* IP_Addr){
+// 	int len;
+// 	char command[50];
+//
+// 	len = sprintf(command, WIFI_CMD_SET_IP_STA, IP_Addr);
+// 	HAL_UART_Transmit(&UART_Handler, command, len, 10);
+//
+//   waitForPassed(5000);
+// }
+//
+// void Wifi_set_AP_IP(char* IP_Addr){
+// 	int len;
+// 	char command[50];
+//
+// 	len = sprintf(command, WIFI_CMD_SET_IP_AP, IP_Addr);
+// 	HAL_UART_Transmit(&UART_Handler, command, len, 10);
+//
+//   waitForPassed(5000);
+// }
 
 /*
  * Enables a TCP server on port 8888
@@ -476,8 +476,6 @@ Access_Point* get_AP(char* essid) {
 	}
 	return NULL;
 }
-
-
 
 /*
  * @Brief adds access points to start of the list, removes old entries

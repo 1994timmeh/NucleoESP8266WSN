@@ -90,22 +90,21 @@ void Testing_Task( void ) {
 	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
 	Wifi_setAP(SSID,"password", 5, 0);
 
-	//Wifi_join("NUCLEOWSN1", "");
+	Wifi_join("NUCLEOWSN1", "");
 
-	//Wifi_enserver();
+	Wifi_enserver();
 
-	//Wifi_get_station_IP();
+	Wifi_get_station_IP();
 
 	Wifi_get_AP_IP();
 
+	Wifi_connectTCP("192.168.1.1", 8888);
 
-	// Wifi_connectTCP("192.168.1.1", 8888);
-	//
-	// Wifi_senddata("TS:[12345]\n\r", 10);
-	//
-	// Wifi_senddata("TE:[Test Data]\n\r", 14);
+	Wifi_senddata("TS:[12345]\n\r", 10);
 
-	// Wifi_timesync();
+	Wifi_senddata("TE:[Test Data]\n\r", 14);
+
+	Wifi_timesync();
 
 	for (;;) {
 		/* Toggle LED */
