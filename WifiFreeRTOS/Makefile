@@ -15,7 +15,7 @@ SRCS = $(PROJ_NAME).c
 SRCS += ESP8622.c
 SRCS += $(NUC_PATH)/src/*.c
 SRCS += $(STDPERPH_PATH)/src/*.c $(COMMON_PATH)/*.c
-SRCS += $(FREERTOS_PATH)/*.c $(FREERTOS_PATH)/portable/GCC/ARM_CM4F/*.c $(FREERTOS_PATH)/portable/MemMang/heap_1.c
+SRCS += $(FREERTOS_PATH)/*.c $(FREERTOS_PATH)/portable/GCC/ARM_CM4F/*.c $(FREERTOS_PATH)/portable/MemMang/heap_2.c
 #SRCS += $(CLI_PATH)/*.c
 # all the files will be generated with this name (main.elf, main.bin, main.hex, etc)
 

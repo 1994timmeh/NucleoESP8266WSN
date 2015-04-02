@@ -90,26 +90,35 @@ void Testing_Task( void ) {
 	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
 	Wifi_setAP(SSID,"password", 5, 0);
 
-	Wifi_set_AP_IP("192.168.1.1");
-	// Wifi_join("NUCLEOWSN1", "");
-	//
-	Wifi_enserver();
-	//
-	// Wifi_get_station_IP();
-	//
+	//Wifi_join("NUCLEOWSN1", "");
+
+	//Wifi_enserver();
+
+	//Wifi_get_station_IP();
+
 	Wifi_get_AP_IP();
-	//
+
+<<<<<<< HEAD
 	//Wifi_connectTCP("192.168.1.1", 8888);
+
+	//Wifi_senddata("TS:[12345]\n\r", 10);
+
+	//Wifi_senddata("TE:[Test Data]\n\r", 14);
+
+	//Wifi_timesync();
+=======
+	// Wifi_connectTCP("192.168.1.1", 8888);
 	//
 	// Wifi_senddata("TS:[12345]\n\r", 10);
 	//
 	// Wifi_senddata("TE:[Test Data]\n\r", 14);
-	//
+
 	// Wifi_timesync();
+>>>>>>> cababf46a9027d4e78ac7b38e9eb9d278f5876dd
 
 	for (;;) {
 		/* Toggle LED */
-		//Wifi_listAPs();
+		Wifi_listAPs();
 		Access_Point* ap = get_AP("Wu-Tang LAN");
 		if (ap != NULL) {
 			debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
@@ -124,11 +133,8 @@ void Software_timer(){
 		vTaskDelay(10);
 		time++;
 
-		if (time % 200 == 0){
-					BRD_LEDOff();
-		} else if (time % 100 == 0){
-			BRD_LEDOn();
-			debug_printf("###############    TIME:     %d\n\r", time);
+		if(time % 100 == 0){
+			BRD_LEDToggle();
 		}
 	}
 }
