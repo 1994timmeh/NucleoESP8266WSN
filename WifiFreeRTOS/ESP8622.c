@@ -12,7 +12,7 @@
 #define FALSE 0
 
 UART_HandleTypeDef UART_Handler;
-QueueHandle_t UARTRX_Queue;	/* Queue used */
+QueueHandle_t Data_Queue;	/* Queue used */
 QueueHandle_t Data_Queue;	/* Queue used */
 
 volatile int lastTaskPassed = FALSE;
@@ -119,7 +119,7 @@ void UART_Processor( void ){
   char new_data[100];
 
   for(;;){
-      if(xQueueReceive(UARTRX_Queue, &new_data, 10) && new_data[0] != '\r'){
+      if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
         debug_printf("LINE RX: %s\n", new_data);
         //We have new data analyze it
         if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
@@ -172,7 +172,7 @@ void UART1_IRQHandler(void)
     		line_buffer[line_buffer_index] = c;
     		line_buffer_index++;
     	} else if (index != 0) {
-    			xQueueSendToBackFromISR(UARTRX_Queue, line_buffer, ( portTickType ) 4 );
+    			xQueueSendToBackFromISR(Data_Queue, line_buffer, ( portTickType ) 4 );
     			// clear line buffer
     			memset(line_buffer, 0, 100);
     			line_buffer_index = 0;
@@ -212,17 +212,17 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
 
    rssii = atoi(rssi);
 
-   //LEDBAR for signal strength
-   if(strncmp(essid, "NUCLEOWSN", 9) == 0){
-      debug_printf("RSSI: %d Distance: %f\n", rssii, RSSItoDistance(rssii));
-
-      HAL_GPIO_WritePin(BRD_D3_GPIO_PORT, BRD_D3_PIN, rssii < 67.5);
-      HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, rssii < 60);
-      HAL_GPIO_WritePin(BRD_D5_GPIO_PORT, BRD_D5_PIN, rssii < 52.5);
-      HAL_GPIO_WritePin(BRD_D6_GPIO_PORT, BRD_D6_PIN, rssii < 45);
-      HAL_GPIO_WritePin(BRD_D7_GPIO_PORT, BRD_D7_PIN, rssii < 37.5);
-      HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, rssii < 30);
-   }
+  //  //LEDBAR for signal strength
+  //  if(strncmp(essid, "NUCLEOWSN", 9) == 0){
+  //     debug_printf("RSSI: %d Distance: %f\n", rssii, RSSItoDistance(rssii));
+   //
+  //     HAL_GPIO_WritePin(BRD_D3_GPIO_PORT, BRD_D3_PIN, rssii < 67.5);
+  //     HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, rssii < 60);
+  //     HAL_GPIO_WritePin(BRD_D5_GPIO_PORT, BRD_D5_PIN, rssii < 52.5);
+  //     HAL_GPIO_WritePin(BRD_D6_GPIO_PORT, BRD_D6_PIN, rssii < 45);
+  //     HAL_GPIO_WritePin(BRD_D7_GPIO_PORT, BRD_D7_PIN, rssii < 37.5);
+  //     HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, rssii < 30);
+  //  }
  }
 
 
