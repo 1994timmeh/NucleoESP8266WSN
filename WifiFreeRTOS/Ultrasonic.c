@@ -1,20 +1,25 @@
 #include "Ultrasonic.h"
+#include "board.h"
+#include "stm32f4xx_hal_conf.h"
+#include "debug_printf.h"
 
 static TIM_HandleTypeDef TIM_IC_Init;
 
 /**
   * Initialises pins and timers for ultrasonic ranger
   */
-void ultrasonic_init(){
+void Ultrasonic_init(){
+  GPIO_InitTypeDef GPIO_InitStructure;
+	TIM_IC_InitTypeDef  TIM_ICInitStructure;
   //PIN 11 - ECHO
   //PIN 12 - PULSE
 
   //Init 2 pins for ECHO and PULSE
-  GPIO_serial.Pin = BRD_D12_PIN;
-  GPIO_serial.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_serial.Pull = GPIO_PULLDOWN;
-  GPIO_serial.Speed = GPIO_SPEED_HIGH;
-  HAL_GPIO_Init(BRD_D12_GPIO_PORT, &GPIO_serial);
+  GPIO_InitStructure.Pin = BRD_D12_PIN;
+  GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStructure.Pull = GPIO_PULLDOWN;
+  GPIO_InitStructure.Speed = GPIO_SPEED_HIGH;
+  HAL_GPIO_Init(BRD_D12_GPIO_PORT, &GPIO_InitStructure);
 
   /* Configure the D0 pin with TIM3 input capture */
   GPIO_InitStructure.Pin = BRD_D11_PIN;				//Pin
@@ -25,7 +30,7 @@ void ultrasonic_init(){
   HAL_GPIO_Init(BRD_D11_GPIO_PORT, &GPIO_InitStructure);	//Initialise Pin
 
   /* Compute the prescaler value. SystemCoreClock = 168000000 - set for 50Khz clock */
-  PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 50000) - 1;
+  uint32_t PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 50000) - 1;
 
   /* Configure Timer 3 settings */
   TIM_IC_Init.Instance = TIM3;					//Enable Timer 3
@@ -78,11 +83,11 @@ void tim3_irqhandler(void) {
 /**
   * Starts ranging
   */
-void ultrasonic_start(){
+void Ultrasonic_start(){
   // Pulse the
-  HAL_GPIO_WritePin(BRD_D3_GPIO_PORT, BRD_D3_PIN, rssii < 67.5);
+  HAL_GPIO_WritePin(BRD_D12_GPIO_PORT, BRD_D12_PIN,1);
   Delay(SEC*0.00001); //10uS hopefully
-  HAL_GPIO_WritePin(BRD_D3_GPIO_PORT, BRD_D3_PIN, rssii < 67.5);
+  HAL_GPIO_WritePin(BRD_D12_GPIO_PORT, BRD_D12_PIN,0);
 }
 
 void Delay(int time){

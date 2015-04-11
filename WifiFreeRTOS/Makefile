@@ -13,6 +13,7 @@ PROJ_NAME=main
 
 SRCS = $(PROJ_NAME).c
 SRCS += ESP8622.c
+SRCS += Ultrasonic.c
 SRCS += $(NUC_PATH)/src/*.c
 SRCS += $(STDPERPH_PATH)/src/*.c $(COMMON_PATH)/*.c
 SRCS += $(FREERTOS_PATH)/*.c $(FREERTOS_PATH)/portable/GCC/ARM_CM4F/*.c $(FREERTOS_PATH)/portable/MemMang/heap_2.c

@@ -1,5 +1,7 @@
 #define SEC 0x7FFF00
 
-void ultrasonic_init();
-void ultrasonic_start();
+void Ultrasonic_init();
+void Ultrasonic_start();
 void Delay(int time);
+
+void tim3_irqhandler(void);

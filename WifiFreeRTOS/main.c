@@ -14,6 +14,7 @@
 #include "stm32f4xx_hal_conf.h"
 #include "debug_printf.h"
 #include "ESP8622.h"
+#include "Ultrasonic.h"
 #include "stddef.h"
 #include <stdio.h>
 
@@ -54,6 +55,7 @@ int main( void ) {
 	BRD_init();
 	Hardware_init();
 	ESP8622_init(); //This initiates another task
+	Ultrasonic_init();
 
 	/* Start the task to flash the LED. */
 	xTaskCreate( (void *) &Testing_Task, (const signed char *) "TEST", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
@@ -110,7 +112,7 @@ void Testing_Task( void ) {
 	for (;;) {
 		/* Toggle LED */
 		//Wifi_listAPs();
-		Access_Point* ap = get_AP("Wu-Tang LAN");
+		Access_Point* ap = (Access_Point*)get_AP("Wu-Tang LAN");
 		if (ap != NULL) {
 			debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
 		}

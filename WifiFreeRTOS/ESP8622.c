@@ -172,7 +172,7 @@ void UART1_IRQHandler(void)
     		line_buffer[line_buffer_index] = c;
     		line_buffer_index++;
     	} else if (index != 0) {
-    			xQueueSendToBackFromISR(Data_Queue, line_buffer, ( portTickType ) 4 );
+    			xQueueSendToBackFromISR(Data_Queue, line_buffer, ( BaseType_t* ) 4 );
     			// clear line buffer
     			memset(line_buffer, 0, 100);
     			line_buffer_index = 0;
