@@ -29,15 +29,15 @@ void Ultrasonic_init(){
   GPIO_InitStructure.Alternate = GPIO_AF2_TIM3;	//Set alternate function to be timer 2
   HAL_GPIO_Init(BRD_D11_GPIO_PORT, &GPIO_InitStructure);	//Initialise Pin
 
-  /* Compute the prescaler value. SystemCoreClock = 168000000 - set for 50Khz clock */
-  uint32_t PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 50000) - 1;
+  /* Compute the prescaler value. SystemCoreClock = 168000000 - set for 1Mhz clock */
+  uint32_t PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 1000000) - 1;
 
   /* Configure Timer 3 settings */
   TIM_IC_Init.Instance = TIM3;					//Enable Timer 3
-  TIM_IC_Init.Init.Period = 2*50000/10;			//Set for 100ms (10Hz) period
+  TIM_IC_Init.Init.Period = 2*1000000;			//Set for 10ms (10Hz) period
   TIM_IC_Init.Init.Prescaler = PrescalerValue;	//Set presale value
   TIM_IC_Init.Init.ClockDivision = 0;			//Set clock division
-  TIM_IC_Init.Init.RepetitionCounter = 0; 		// Set Reload Value
+  TIM_IC_Init.Init.RepetitionCounter = 0;		// Set Reload Value
   TIM_IC_Init.Init.CounterMode = TIM_COUNTERMODE_UP;	//Set timer to count up.
 
   /* Configure TIM3 Input capture */
@@ -74,10 +74,11 @@ void tim3_irqhandler(void) {
   /* Read and display the Input Capture value of Timer 3, channel 2 */
   input_capture_value = HAL_TIM_ReadCapturedValue(&TIM_IC_Init, TIM_CHANNEL_2);
 
-  // If time >= 30ms
-  //    No item found
-  // else
-  //    print (thing is x distance away) (uS/58=cm) which will be fun to calculate
+  //If time is > 30 there was nothing detected
+  if(input_capture_value < 30){
+    float dist_cm = input_capture_value/58;
+    debug_printf("Distance: %dcm\n", (int)dist_cm);
+  }
 }
 
 /**
