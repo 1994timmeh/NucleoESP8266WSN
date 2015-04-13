@@ -55,11 +55,10 @@ int main( void ) {
 	BRD_init();
 	Hardware_init();
 	ESP8622_init(); //This initiates another task
-	Ultrasonic_init();
 
 	/* Start the task to flash the LED. */
 	xTaskCreate( (void *) &Testing_Task, (const signed char *) "TEST", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
-	xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY + 1, NULL );
+//	xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY + 1, NULL );
 
 	/* Start the scheduler.
 
@@ -82,40 +81,42 @@ int main( void ) {
   */
 void Testing_Task( void ) {
 	char SSID[50];
-
-	Wifi_reset();
-
-	debug_printf("I AM NODE %d\n\n", NODE_ID);
-
-	Wifi_setmode();
-
-	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
-	Wifi_setAP(SSID,"password", 5, 0);
-
-	Wifi_set_AP_IP("192.168.1.1");
-	// Wifi_join("NUCLEOWSN1", "");
+	Ultrasonic_init();
 	//
-	Wifi_enserver();
+	// Wifi_reset();
 	//
-	// Wifi_get_station_IP();
+	// debug_printf("I AM NODE %d\n\n", NODE_ID);
 	//
-	Wifi_get_AP_IP();
+	// Wifi_setmode();
 	//
-	//Wifi_connectTCP("192.168.1.1", 8888);
+	// sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
+	// Wifi_setAP(SSID,"password", 5, 0);
 	//
-	// Wifi_senddata("TS:[12345]\n\r", 10);
-	//
-	// Wifi_senddata("TE:[Test Data]\n\r", 14);
-	//
-	// Wifi_timesync();
+	// Wifi_set_AP_IP("192.168.1.1");
+	// // Wifi_join("NUCLEOWSN1", "");
+	// //
+	// Wifi_enserver();
+	// //
+	// // Wifi_get_station_IP();
+	// //
+	// Wifi_get_AP_IP();
+	// //
+	// //Wifi_connectTCP("192.168.1.1", 8888);
+	// //
+	// // Wifi_senddata("TS:[12345]\n\r", 10);
+	// //
+	// // Wifi_senddata("TE:[Test Data]\n\r", 14);
+	// //
+	// // Wifi_timesync();
 
 	for (;;) {
 		/* Toggle LED */
-		//Wifi_listAPs();
-		Access_Point* ap = (Access_Point*)get_AP("Wu-Tang LAN");
-		if (ap != NULL) {
-			debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
-		}
+		// //Wifi_listAPs();
+		// Access_Point* ap = (Access_Point*)get_AP("Wu-Tang LAN");
+		// if (ap != NULL) {
+		// 	debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
+		// }
+		Ultrasonic_start();
 		/* Delay the task for 1000ms */
 		vTaskDelay(1000);
 	}
@@ -127,7 +128,7 @@ void Software_timer(){
 		time++;
 
 		if (time % 200 == 0){
-					BRD_LEDOff();
+			BRD_LEDOff();
 		} else if (time % 100 == 0){
 			BRD_LEDOn();
 			debug_printf("###############    TIME:     %d\n\r", time);

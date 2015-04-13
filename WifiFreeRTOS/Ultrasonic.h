@@ -2,6 +2,8 @@
 
 void Ultrasonic_init();
 void Ultrasonic_start();
-void Delay(int time);
+int Ultrasonic_getdist();
+void uDelay(unsigned long nCount);
+
 
 void tim3_irqhandler(void);
