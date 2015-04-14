@@ -7,14 +7,23 @@
 #include "ESP8622.h"
 #include <string.h>
 #include <stdio.h>
+#include "semphr.h"
+
 
 #define TRUE 1
 #define FALSE 0
+
+
+#define USART_TX_TASK_PRIORITY					( tskIDLE_PRIORITY + 1 )
+#define USART_TX_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
 
 UART_HandleTypeDef UART_Handler;
 DMA_HandleTypeDef hdma_tx;
 QueueHandle_t Data_Queue;	/* Queue used */
 QueueHandle_t Data_Queue;	/* Queue used */
+
+SemaphoreHandle_t USART1_Semaphore;
+QueueHandle_t USART_Tx_Queue;	/* Queue used */
 
 volatile int lastTaskPassed = FALSE;
 volatile int prompt = FALSE;
@@ -31,6 +40,7 @@ extern uint32_t time;
 
 APs* Access_Points;
 
+extern void Testing_Task( void );
 /**
   * This module is for the ESP8622 'El Cheapo' Wifi Module.
   * It uses pins D10 (TX) and D2 (RX) and Serial 1 on the NucleoF401RE Dev Board
@@ -118,15 +128,19 @@ void 	ESP8622_init( void ){
 }
 
 void dma_Init(void) {
+
+
+
+	USART1_Semaphore = xSemaphoreCreateMutex();
 	  /*##-1- Enable peripherals and GPIO Clocks #################################*/
 
 	  /* Enable DMA1 clock */
-	  __HAL_RCC_DMA1_CLK_ENABLE();
+	  __HAL_RCC_DMA2_CLK_ENABLE();
 
 	  /*##-3- Configure the DMA streams ##########################################*/
 	  /* Configure the DMA handler for Transmission process */
-	  hdma_tx.Instance                 = DMA1_Stream4;
-	  hdma_tx.Init.Channel             = DMA_CHANNEL_0;
+	  hdma_tx.Instance                 = DMA2_Stream7;
+	  hdma_tx.Init.Channel             = DMA_CHANNEL_4;
 	  hdma_tx.Init.Direction           = DMA_MEMORY_TO_PERIPH;
 	  hdma_tx.Init.PeriphInc           = DMA_PINC_DISABLE;
 	  hdma_tx.Init.MemInc              = DMA_MINC_ENABLE;
@@ -151,14 +165,19 @@ void dma_Init(void) {
 
 	  /*##-4- Configure the NVIC for DMA #########################################*/
 	  /* NVIC configuration for DMA transfer complete interrupt (UART1_TX) */
-	  HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 10, 1);
-	  HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
+	  HAL_NVIC_SetPriority(DMA2_Stream7_IRQn, 10, 1);
+	  HAL_NVIC_EnableIRQ(DMA2_Stream7_IRQn);
 
-	  NVIC_SetVector(DMA1_Stream4_IRQn, (uint32_t)&UART1_DMA_TX_IRQHandler);
+	  NVIC_SetVector(DMA2_Stream7_IRQn, (uint32_t)&UART1_DMA_TX_IRQHandler);
 
 	  /* initialise UART_Buffer	*/
 	  uart_tx_buffer = pvPortMalloc(sizeof(uint8_t)* 100);
-	  esp_Send("test");
+	  //HAL_UART_Transmit(&UART_Handler, "asd", 3, 10);
+	  //esp_Send("test");
+
+	  /* start usart sender task	*/
+//	  xTaskCreate( (void *) &UART_Tx_Task, (const signed char *) "USART", USART_TX_TASK_STACK_SIZE, NULL, USART_TX_TASK_PRIORITY, NULL );
+//	  USART_Tx_Queue = xQueueCreate(20, sizeof(char[100]));
 }
 
 
@@ -240,30 +259,42 @@ void UART1_IRQHandler(void)
   * @param  None
   * @retval None
   */
-void UART1_DMA_TX_IRQHandler(void)
-{
-	//TODO give back semaphore
-
+void UART1_DMA_TX_IRQHandler(void) {
   HAL_DMA_IRQHandler(UART_Handler.hdmatx);
-
+  xSemaphoreGiveFromISR(USART1_Semaphore, &Testing_Task);
 
 }
+
 
 uint8_t esp_Send(uint8_t* send_String) {
-	uint8_t l = strlen(send_String);
-	memcpy(send_String, uart_tx_buffer, l);
-	if (HAL_UART_Transmit_DMA(&UART_Handler, (uint8_t*)uart_tx_buffer, l) != HAL_OK) {
-		return 0;
+	if (USART1_Semaphore != NULL) {
+		if( xSemaphoreTake( USART1_Semaphore, ( TickType_t ) 1000 ) == pdTRUE ) {
+			uint8_t l = strlen(send_String);
+			memcpy(uart_tx_buffer, send_String,  l);
+			if (HAL_UART_Transmit_DMA(&UART_Handler, (uint8_t*)uart_tx_buffer, l) != HAL_OK) {
+				return 0;
+			}
+			return 1;
+		}
 	}
-	return 1;
+	return 0;
 }
+
+//void UART_Tx_Task( void ) {
+//	for(;;){
+//	      if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
+//
+//
+//
+//	vTaskDelay(10);
+//}
 
 void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:45:a2:ea:92",6)
 	 char zero;
 	 char* essid = pvPortMalloc(sizeof(char)*30);
 	 char rssi[3];
 	 int rssii;
-   char* bssid = pvPortMalloc(sizeof(char)*30);
+	 char* bssid = pvPortMalloc(sizeof(char)*30);
 	 char channel[5];
 
 
@@ -299,12 +330,19 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
   //     HAL_GPIO_WritePin(BRD_D7_GPIO_PORT, BRD_D7_PIN, rssii < 37.5);
   //     HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, rssii < 30);
   //  }
+   vPortFree(essid);
+   vPortFree(bssid);
  }
 
 
 void handle_data(char* data) {
   uint8_t pipe_no = 0, length = 0;
   char message[50];
+
+  memset(message, 0, 50);
+  char trash;
+
+
   sscanf(data, "%d,%d:%s\n", pipe_no, length, message);
   //debug_printf("Received data! Pipe=%d, length=%d, message=%s\n", pipe_no, length, message);
   if(strncmp(message, "TS:[", 4) == 0){
@@ -314,6 +352,7 @@ void handle_data(char* data) {
   } else if(strncmp(message, "TE:[", 4) == 0){
     debug_printf("Message received: %s\n", message + 4);
   }
+
 }
 
 //############################ HELPER FUNCTIONS ###############################
@@ -346,8 +385,8 @@ void Wifi_reset(){
 
   debug_printf("Reseting module... Please wait\n");
 
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_RST, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_RST, 10);
+  esp_Send(command);
   waitForPassed(5000);
 
   waitForPassed(5000);
@@ -361,8 +400,8 @@ void Wifi_join(char SSID[50], char password[50]){
 
   debug_printf("Joining network\n");
 
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
+  esp_Send(command);
   waitForPassed(5000);
 }
 
@@ -372,8 +411,8 @@ void Wifi_setmode(){
 
   debug_printf("Setting module mode\n");
 
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MODE_BOTH, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MODE_BOTH, 10);
+  esp_Send(command);
   waitForPassed(5000);
 }
 
@@ -386,8 +425,8 @@ void Wifi_setmode(){
 void Wifi_listAPs(){
   char command[50] = WIFI_CMD_LIST_APS;
 
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
+  esp_Send(command);
   debug_printf("Getting AP Names\n");
 
   waitForPassed(5000);
@@ -400,7 +439,8 @@ void Wifi_listAPs(){
  */
 void Wifi_status(){
   char command[50] = WIFI_CMD_STATUS;
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_STATUS, 10);
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_STATUS, 10);
+  esp_Send(command);
 }
 
 /* Sets the wifi ap
@@ -413,28 +453,29 @@ void Wifi_setAP(char SSID[50], char password[50], uint8_t chan, uint8_t sec){
   debug_printf("Setting AP details (probably crashing the wifi)\n");
 
   len = sprintf(&(command[0]), WIFI_CMD_SET_AP, SSID, password, chan, sec);
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
+  esp_Send(command);
   waitForPassed(5000);
 }
 
 /* Checks the IP address */
 void Wifi_checkcon(){
   char command[50] = "AT+CWJAP\n\r";
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), 12, 10);
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), 12, 10);
+  esp_Send(command);
 }
 
 void Wifi_get_station_IP(){
   char command[50] = WIFI_CMD_GET_IP_STA;
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_GET_IP_STA, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_GET_IP_STA, 10);
+  esp_Send(command);
   waitForPassed(5000);
 }
 
 void Wifi_get_AP_IP(){
   char command[50] = WIFI_CMD_GET_IP_AP;
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_GET_IP_AP, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_GET_IP_AP, 10);
+  esp_Send(command);
   waitForPassed(5000);
 }
 
@@ -443,8 +484,8 @@ void Wifi_get_AP_IP(){
  	char command[50];
 
  	len = sprintf(command, WIFI_CMD_SET_IP_STA, IP_Addr);
- 	HAL_UART_Transmit(&UART_Handler, command, len, 10);
-
+ 	//HAL_UART_Transmit(&UART_Handler, command, len, 10);
+ 	esp_Send(command);
    waitForPassed(5000);
  }
 
@@ -453,8 +494,8 @@ void Wifi_get_AP_IP(){
  	char command[50];
 
  	len = sprintf(command, WIFI_CMD_SET_IP_AP, IP_Addr);
- 	HAL_UART_Transmit(&UART_Handler, command, len, 10);
-
+ 	//HAL_UART_Transmit(&UART_Handler, command, len, 10);
+ 	esp_Send(command);
    waitForPassed(5000);
  }
 
@@ -467,33 +508,34 @@ void Wifi_enserver(){
   debug_printf("Enabling a server on 8888\n");
 
   //Set MUX to 1
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MUX_1, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MUX_1, 10);
+  esp_Send(command);
   waitForPassed(5000);
 
   //Enable the TCP server on 8888
   memcpy(&(command[0]), WIFI_CMD_SERVE, WIFI_LEN_SERVE);
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
+  esp_Send(command);
   waitForPassed(5000);
 }
 
 void Wifi_connecttest(){
-  HAL_UART_Transmit(&UART_Handler, "AT+CIPSTART=0,\"TCP\",\"192.168.4.1\",8888\r\n", 40, 10);
+ //HAL_UART_Transmit(&UART_Handler, "AT+CIPSTART=0,\"TCP\",\"192.168.4.1\",8888\r\n", 40, 10);
+	esp_Send("AT+CIPSTART=0,\"TCP\",\"192.168.4.1\",8888\r\n");
   waitForPassed(5000);
 }
 
 void Wifi_checkfirmware(){
-  HAL_UART_Transmit(&UART_Handler, "AT+GMR\r\n", 8, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, "AT+GMR\r\n", 8, 10);
+	esp_Send("AT+GMR\r\n");
   waitForPassed(5000);
 }
 
 void Wifi_connectTCP( char ip[50], int port){
   char command[50];
   int len = sprintf(command, "AT+CIPSTART=0,\"TCP\",\"%s\",%d\r\n", ip, 8888);
-  HAL_UART_Transmit(&UART_Handler, command, len, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, command, len, 10);
+  esp_Send(command);
   waitForPassed(5000);
 }
 
@@ -505,13 +547,14 @@ void Wifi_senddata(char data[50], int length){
 
   debug_printf("Sending data\n");
 
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
+  esp_Send(command);
   vTaskDelay(100);
 
   len = sprintf(send_data, "%s\n\r", data);
 
-  HAL_UART_Transmit(&UART_Handler, send_data, len, 10);
+  //HAL_UART_Transmit(&UART_Handler, send_data, len, 10);
+  esp_Send(send_data);
   waitForPassed(5000);
 }
 

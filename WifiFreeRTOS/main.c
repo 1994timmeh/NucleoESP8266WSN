@@ -28,6 +28,7 @@
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
+//extern typedef struct Ap Access_Point;
 
 
 /* Private function prototypes -----------------------------------------------*/
@@ -42,8 +43,10 @@ uint32_t time = 0;
 /* Task Priorities ------------------------------------------------------------*/
 #define mainLED_PRIORITY					( tskIDLE_PRIORITY + 2 )
 
+
 /* Task Stack Allocations -----------------------------------------------------*/
 #define mainLED_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
+
 
 /**
   * @brief  Starts all the other tasks, then starts the scheduler.
@@ -81,33 +84,35 @@ int main( void ) {
   */
 void Testing_Task( void ) {
 	char SSID[50];
-	Ultrasonic_init();
-	//
-	// Wifi_reset();
-	//
-	// debug_printf("I AM NODE %d\n\n", NODE_ID);
-	//
-	// Wifi_setmode();
-	//
-	// sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
-	// Wifi_setAP(SSID,"password", 5, 0);
-	//
-	// Wifi_set_AP_IP("192.168.1.1");
-	// // Wifi_join("NUCLEOWSN1", "");
-	// //
-	// Wifi_enserver();
-	// //
-	// // Wifi_get_station_IP();
-	// //
-	// Wifi_get_AP_IP();
-	// //
-	// //Wifi_connectTCP("192.168.1.1", 8888);
-	// //
-	// // Wifi_senddata("TS:[12345]\n\r", 10);
-	// //
-	// // Wifi_senddata("TE:[Test Data]\n\r", 14);
-	// //
-	// // Wifi_timesync();
+
+	//Ultrasonic_init();
+	debug_printf("Begin testing\n\n");
+
+	 Wifi_reset();
+
+	 debug_printf("I AM NODE %d\n\n", NODE_ID);
+
+	 Wifi_setmode();
+
+	 sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
+	 Wifi_setAP(SSID,"password", 5, 0);
+
+	 Wifi_set_AP_IP("192.168.1.1");
+	 // Wifi_join("NUCLEOWSN1", "");
+	 //
+	 Wifi_enserver();
+	 //
+	 // Wifi_get_station_IP();
+	 //
+	 Wifi_get_AP_IP();
+	 //
+	 //Wifi_connectTCP("192.168.1.1", 8888);
+	 //
+	 // Wifi_senddata("TS:[12345]\n\r", 10);
+	 //
+	 // Wifi_senddata("TE:[Test Data]\n\r", 14);
+	 //
+	 // Wifi_timesync();
 
 	for (;;) {
 		/* Toggle LED */
@@ -118,19 +123,28 @@ void Testing_Task( void ) {
 		// }
 		Ultrasonic_start();
 		debug_printf("Distance: %d\n", Ultrasonic_getdist());
+
 		/* Delay the task for 1000ms */
 		vTaskDelay(1000);
 	}
 }
 
+
+void USART_Tx_Task( void ) {
+
+}
+
+
 void Software_timer(){
 	for(;;){
-		vTaskDelay(10);
+		vTaskDelay(1);
 		time++;
 
-		if (time % 200 == 0){
-			BRD_LEDOff();
-		} else if (time % 100 == 0){
+
+		if (time % 2000 == 0){
+					BRD_LEDOff();
+		} else if (time % 1000 == 0){
+
 			BRD_LEDOn();
 			debug_printf("###############    TIME:     %d\n\r", time);
 		}
