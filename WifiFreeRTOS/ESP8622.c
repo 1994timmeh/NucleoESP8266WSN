@@ -7,14 +7,23 @@
 #include "ESP8622.h"
 #include <string.h>
 #include <stdio.h>
+#include "semphr.h"
+
 
 #define TRUE 1
 #define FALSE 0
+
+
+#define USART_TX_TASK_PRIORITY					( tskIDLE_PRIORITY + 1 )
+#define USART_TX_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
 
 UART_HandleTypeDef UART_Handler;
 DMA_HandleTypeDef hdma_tx;
 QueueHandle_t Data_Queue;	/* Queue used */
 QueueHandle_t Data_Queue;	/* Queue used */
+
+SemaphoreHandle_t USART1_Semaphore;
+QueueHandle_t USART_Tx_Queue;	/* Queue used */
 
 volatile int lastTaskPassed = FALSE;
 volatile int prompt = FALSE;
@@ -118,14 +127,18 @@ void 	ESP8622_init( void ){
 }
 
 void dma_Init(void) {
+
+
+
+	USART1_Semaphore = xSemaphoreCreateMutex();
 	  /*##-1- Enable peripherals and GPIO Clocks #################################*/
 
 	  /* Enable DMA1 clock */
-	  __HAL_RCC_DMA1_CLK_ENABLE();
+	  __HAL_RCC_DMA2_CLK_ENABLE();
 
 	  /*##-3- Configure the DMA streams ##########################################*/
 	  /* Configure the DMA handler for Transmission process */
-	  hdma_tx.Instance                 = DMA1_Stream7;
+	  hdma_tx.Instance                 = DMA2_Stream7;
 	  hdma_tx.Init.Channel             = DMA_CHANNEL_4;
 	  hdma_tx.Init.Direction           = DMA_MEMORY_TO_PERIPH;
 	  hdma_tx.Init.PeriphInc           = DMA_PINC_DISABLE;
@@ -151,14 +164,19 @@ void dma_Init(void) {
 
 	  /*##-4- Configure the NVIC for DMA #########################################*/
 	  /* NVIC configuration for DMA transfer complete interrupt (UART1_TX) */
-	  HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 10, 1);
-	  HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
+	  HAL_NVIC_SetPriority(DMA2_Stream7_IRQn, 10, 1);
+	  HAL_NVIC_EnableIRQ(DMA2_Stream7_IRQn);
 
-	  NVIC_SetVector(DMA1_Stream4_IRQn, (uint32_t)&UART1_DMA_TX_IRQHandler);
+	  NVIC_SetVector(DMA2_Stream7_IRQn, (uint32_t)&UART1_DMA_TX_IRQHandler);
 
 	  /* initialise UART_Buffer	*/
 	  uart_tx_buffer = pvPortMalloc(sizeof(uint8_t)* 100);
-	  esp_Send("test");
+	  //HAL_UART_Transmit(&UART_Handler, "asd", 3, 10);
+	  //esp_Send("test");
+
+	  /* start usart sender task	*/
+//	  xTaskCreate( (void *) &UART_Tx_Task, (const signed char *) "USART", USART_TX_TASK_STACK_SIZE, NULL, USART_TX_TASK_PRIORITY, NULL );
+//	  USART_Tx_Queue = xQueueCreate(20, sizeof(char[100]));
 }
 
 
@@ -242,21 +260,34 @@ void UART1_IRQHandler(void)
   */
 void UART1_DMA_TX_IRQHandler(void)
 {
-	//TODO give back semaphore
-
   HAL_DMA_IRQHandler(UART_Handler.hdmatx);
-
+  xSemaphoreGive(USART1_Semaphore);
 
 }
+
 
 uint8_t esp_Send(uint8_t* send_String) {
-	uint8_t l = strlen(send_String);
-	memcpy(send_String, uart_tx_buffer, l);
-	if (HAL_UART_Transmit_DMA(&UART_Handler, (uint8_t*)uart_tx_buffer, l) != HAL_OK) {
-		return 0;
+	if (USART1_Semaphore != NULL) {
+		if( xSemaphoreTake( USART1_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
+			uint8_t l = strlen(send_String);
+			memcpy(uart_tx_buffer, send_String,  l);
+			if (HAL_UART_Transmit_DMA(&UART_Handler, (uint8_t*)uart_tx_buffer, l) != HAL_OK) {
+				return 0;
+			}
+			return 1;
+		}
 	}
-	return 1;
+	return 0;
 }
+
+//void UART_Tx_Task( void ) {
+//	for(;;){
+//	      if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
+//
+//
+//
+//	vTaskDelay(10);
+//}
 
 void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:45:a2:ea:92",6)
 	 char zero;

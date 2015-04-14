@@ -43,8 +43,10 @@ uint32_t time = 0;
 /* Task Priorities ------------------------------------------------------------*/
 #define mainLED_PRIORITY					( tskIDLE_PRIORITY + 2 )
 
+
 /* Task Stack Allocations -----------------------------------------------------*/
 #define mainLED_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
+
 
 /**
   * @brief  Starts all the other tasks, then starts the scheduler.
@@ -82,24 +84,9 @@ int main( void ) {
   */
 void Testing_Task( void ) {
 	char SSID[50];
-<<<<<<< HEAD
-	int i;
-	Wifi_reset();
 
-	debug_printf("I AM NODE %d\n\n", NODE_ID);
-
-	Wifi_setmode();
-
-	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
-	Wifi_setAP(SSID,"password", 5, 0);
-
-	Wifi_set_AP_IP("192.168.1.1");
-	// Wifi_join("NUCLEOWSN1", "");
-	//
-	Wifi_enserver();
-=======
 	Ultrasonic_init();
->>>>>>> 5e2024bab9095226f088b9f76e6b7a5301a7655c
+
 	//
 	// Wifi_reset();
 	//
@@ -129,44 +116,35 @@ void Testing_Task( void ) {
 
 	for (;;) {
 		/* Toggle LED */
-<<<<<<< HEAD
-		//Wifi_listAPs();
-		Access_Point* ap = get_AP("Wu-Tang LAN");
-		if (ap != NULL) {
-			debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
-		}
-//		Access_Point* current_AP = Access_Points->HEAD;
-//		for (i = 0; i < Access_Points->size; i++) {
-//			debug_printf("Network %d: %s", i, current_AP->BSSID);
-//			current_AP = current_AP->next;
-//		}
-=======
+
 		// //Wifi_listAPs();
 		// Access_Point* ap = (Access_Point*)get_AP("Wu-Tang LAN");
 		// if (ap != NULL) {
 		// 	debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
 		// }
 		Ultrasonic_start();
->>>>>>> 5e2024bab9095226f088b9f76e6b7a5301a7655c
+
 		/* Delay the task for 1000ms */
 		vTaskDelay(1000);
 	}
 }
+
+
+void USART_Tx_Task( void ) {
+
+}
+
 
 void Software_timer(){
 	for(;;){
 		vTaskDelay(1);
 		time++;
 
-<<<<<<< HEAD
+
 		if (time % 2000 == 0){
 					BRD_LEDOff();
 		} else if (time % 1000 == 0){
-=======
-		if (time % 200 == 0){
-			BRD_LEDOff();
-		} else if (time % 100 == 0){
->>>>>>> 5e2024bab9095226f088b9f76e6b7a5301a7655c
+
 			BRD_LEDOn();
 			debug_printf("###############    TIME:     %d\n\r", time);
 		}
