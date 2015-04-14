@@ -40,6 +40,7 @@ extern uint32_t time;
 
 APs* Access_Points;
 
+extern void Testing_Task( void );
 /**
   * This module is for the ESP8622 'El Cheapo' Wifi Module.
   * It uses pins D10 (TX) and D2 (RX) and Serial 1 on the NucleoF401RE Dev Board
@@ -258,17 +259,16 @@ void UART1_IRQHandler(void)
   * @param  None
   * @retval None
   */
-void UART1_DMA_TX_IRQHandler(void)
-{
+void UART1_DMA_TX_IRQHandler(void) {
   HAL_DMA_IRQHandler(UART_Handler.hdmatx);
-  xSemaphoreGive(USART1_Semaphore);
+  xSemaphoreGiveFromISR(USART1_Semaphore, &Testing_Task);
 
 }
 
 
 uint8_t esp_Send(uint8_t* send_String) {
 	if (USART1_Semaphore != NULL) {
-		if( xSemaphoreTake( USART1_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
+		if( xSemaphoreTake( USART1_Semaphore, ( TickType_t ) 1000 ) == pdTRUE ) {
 			uint8_t l = strlen(send_String);
 			memcpy(uart_tx_buffer, send_String,  l);
 			if (HAL_UART_Transmit_DMA(&UART_Handler, (uint8_t*)uart_tx_buffer, l) != HAL_OK) {
@@ -385,8 +385,8 @@ void Wifi_reset(){
 
   debug_printf("Reseting module... Please wait\n");
 
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_RST, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_RST, 10);
+  esp_Send(command);
   waitForPassed(5000);
 
   waitForPassed(5000);
@@ -400,8 +400,8 @@ void Wifi_join(char SSID[50], char password[50]){
 
   debug_printf("Joining network\n");
 
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
+  esp_Send(command);
   waitForPassed(5000);
 }
 
@@ -411,8 +411,8 @@ void Wifi_setmode(){
 
   debug_printf("Setting module mode\n");
 
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MODE_BOTH, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MODE_BOTH, 10);
+  esp_Send(command);
   waitForPassed(5000);
 }
 
@@ -425,8 +425,8 @@ void Wifi_setmode(){
 void Wifi_listAPs(){
   char command[50] = WIFI_CMD_LIST_APS;
 
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_LIST_APS, 10);
+  esp_Send(command);
   debug_printf("Getting AP Names\n");
 
   waitForPassed(5000);
@@ -439,7 +439,8 @@ void Wifi_listAPs(){
  */
 void Wifi_status(){
   char command[50] = WIFI_CMD_STATUS;
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_STATUS, 10);
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_STATUS, 10);
+  esp_Send(command);
 }
 
 /* Sets the wifi ap
@@ -452,28 +453,29 @@ void Wifi_setAP(char SSID[50], char password[50], uint8_t chan, uint8_t sec){
   debug_printf("Setting AP details (probably crashing the wifi)\n");
 
   len = sprintf(&(command[0]), WIFI_CMD_SET_AP, SSID, password, chan, sec);
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
+  esp_Send(command);
   waitForPassed(5000);
 }
 
 /* Checks the IP address */
 void Wifi_checkcon(){
   char command[50] = "AT+CWJAP\n\r";
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), 12, 10);
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), 12, 10);
+  esp_Send(command);
 }
 
 void Wifi_get_station_IP(){
   char command[50] = WIFI_CMD_GET_IP_STA;
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_GET_IP_STA, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_GET_IP_STA, 10);
+  esp_Send(command);
   waitForPassed(5000);
 }
 
 void Wifi_get_AP_IP(){
   char command[50] = WIFI_CMD_GET_IP_AP;
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_GET_IP_AP, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_GET_IP_AP, 10);
+  esp_Send(command);
   waitForPassed(5000);
 }
 
@@ -482,8 +484,8 @@ void Wifi_get_AP_IP(){
  	char command[50];
 
  	len = sprintf(command, WIFI_CMD_SET_IP_STA, IP_Addr);
- 	HAL_UART_Transmit(&UART_Handler, command, len, 10);
-
+ 	//HAL_UART_Transmit(&UART_Handler, command, len, 10);
+ 	esp_Send(command);
    waitForPassed(5000);
  }
 
@@ -492,8 +494,8 @@ void Wifi_get_AP_IP(){
  	char command[50];
 
  	len = sprintf(command, WIFI_CMD_SET_IP_AP, IP_Addr);
- 	HAL_UART_Transmit(&UART_Handler, command, len, 10);
-
+ 	//HAL_UART_Transmit(&UART_Handler, command, len, 10);
+ 	esp_Send(command);
    waitForPassed(5000);
  }
 
@@ -506,33 +508,34 @@ void Wifi_enserver(){
   debug_printf("Enabling a server on 8888\n");
 
   //Set MUX to 1
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MUX_1, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MUX_1, 10);
+  esp_Send(command);
   waitForPassed(5000);
 
   //Enable the TCP server on 8888
   memcpy(&(command[0]), WIFI_CMD_SERVE, WIFI_LEN_SERVE);
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
+  esp_Send(command);
   waitForPassed(5000);
 }
 
 void Wifi_connecttest(){
-  HAL_UART_Transmit(&UART_Handler, "AT+CIPSTART=0,\"TCP\",\"192.168.4.1\",8888\r\n", 40, 10);
+ //HAL_UART_Transmit(&UART_Handler, "AT+CIPSTART=0,\"TCP\",\"192.168.4.1\",8888\r\n", 40, 10);
+	esp_Send("AT+CIPSTART=0,\"TCP\",\"192.168.4.1\",8888\r\n");
   waitForPassed(5000);
 }
 
 void Wifi_checkfirmware(){
-  HAL_UART_Transmit(&UART_Handler, "AT+GMR\r\n", 8, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, "AT+GMR\r\n", 8, 10);
+	esp_Send("AT+GMR\r\n");
   waitForPassed(5000);
 }
 
 void Wifi_connectTCP( char ip[50], int port){
   char command[50];
   int len = sprintf(command, "AT+CIPSTART=0,\"TCP\",\"%s\",%d\r\n", ip, 8888);
-  HAL_UART_Transmit(&UART_Handler, command, len, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, command, len, 10);
+  esp_Send(command);
   waitForPassed(5000);
 }
 
@@ -544,13 +547,14 @@ void Wifi_senddata(char data[50], int length){
 
   debug_printf("Sending data\n");
 
-  HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
-
+  //HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
+  esp_Send(command);
   vTaskDelay(100);
 
   len = sprintf(send_data, "%s\n\r", data);
 
-  HAL_UART_Transmit(&UART_Handler, send_data, len, 10);
+  //HAL_UART_Transmit(&UART_Handler, send_data, len, 10);
+  esp_Send(send_data);
   waitForPassed(5000);
 }
 

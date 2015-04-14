@@ -85,44 +85,44 @@ int main( void ) {
 void Testing_Task( void ) {
 	char SSID[50];
 
-	Ultrasonic_init();
+	//Ultrasonic_init();
+	debug_printf("Begin testing\n\n");
 
-	//
-	// Wifi_reset();
-	//
-	// debug_printf("I AM NODE %d\n\n", NODE_ID);
-	//
-	// Wifi_setmode();
-	//
-	// sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
-	// Wifi_setAP(SSID,"password", 5, 0);
-	//
-	// Wifi_set_AP_IP("192.168.1.1");
-	// // Wifi_join("NUCLEOWSN1", "");
-	// //
-	// Wifi_enserver();
-	// //
-	// // Wifi_get_station_IP();
-	// //
-	// Wifi_get_AP_IP();
-	// //
-	// //Wifi_connectTCP("192.168.1.1", 8888);
-	// //
-	// // Wifi_senddata("TS:[12345]\n\r", 10);
-	// //
-	// // Wifi_senddata("TE:[Test Data]\n\r", 14);
-	// //
-	// // Wifi_timesync();
+	 Wifi_reset();
+
+	 debug_printf("I AM NODE %d\n\n", NODE_ID);
+
+	 Wifi_setmode();
+
+	 sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
+	 Wifi_setAP(SSID,"password", 5, 0);
+
+	 Wifi_set_AP_IP("192.168.1.1");
+	 // Wifi_join("NUCLEOWSN1", "");
+	 //
+	 Wifi_enserver();
+	 //
+	 // Wifi_get_station_IP();
+	 //
+	 Wifi_get_AP_IP();
+	 //
+	 //Wifi_connectTCP("192.168.1.1", 8888);
+	 //
+	 // Wifi_senddata("TS:[12345]\n\r", 10);
+	 //
+	 // Wifi_senddata("TE:[Test Data]\n\r", 14);
+	 //
+	 // Wifi_timesync();
 
 	for (;;) {
 		/* Toggle LED */
 
-		// //Wifi_listAPs();
-		// Access_Point* ap = (Access_Point*)get_AP("Wu-Tang LAN");
-		// if (ap != NULL) {
-		// 	debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
-		// }
-		Ultrasonic_start();
+		 Wifi_listAPs();
+		 Access_Point* ap = (Access_Point*)get_AP("Wu-Tang LAN");
+		 if (ap != NULL) {
+		 	debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
+		 }
+		//Ultrasonic_start();
 
 		/* Delay the task for 1000ms */
 		vTaskDelay(1000);
