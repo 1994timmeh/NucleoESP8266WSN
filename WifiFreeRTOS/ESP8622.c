@@ -125,8 +125,8 @@ void dma_Init(void) {
 
 	  /*##-3- Configure the DMA streams ##########################################*/
 	  /* Configure the DMA handler for Transmission process */
-	  hdma_tx.Instance                 = DMA1_Stream4;
-	  hdma_tx.Init.Channel             = DMA_CHANNEL_0;
+	  hdma_tx.Instance                 = DMA1_Stream7;
+	  hdma_tx.Init.Channel             = DMA_CHANNEL_4;
 	  hdma_tx.Init.Direction           = DMA_MEMORY_TO_PERIPH;
 	  hdma_tx.Init.PeriphInc           = DMA_PINC_DISABLE;
 	  hdma_tx.Init.MemInc              = DMA_MINC_ENABLE;
@@ -139,7 +139,7 @@ void dma_Init(void) {
 	  hdma_tx.Init.MemBurst            = DMA_MBURST_INC4;
 	  hdma_tx.Init.PeriphBurst         = DMA_PBURST_INC4;
 
-	  HAL_DMA_(DMA1_Stream2, DMA_IT_TC, ENABLE);
+	  //HAL_DMA_(DMA1_Stream2, DMA_IT_TC, ENABLE);
 
 	  HAL_DMA_Init(&hdma_tx);
 
