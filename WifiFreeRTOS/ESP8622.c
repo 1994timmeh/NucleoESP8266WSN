@@ -187,7 +187,7 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
 	 char* essid = pvPortMalloc(sizeof(char)*30);
 	 char rssi[3];
 	 int rssii;
-   char* bssid = pvPortMalloc(sizeof(char)*30);
+	 char* bssid = pvPortMalloc(sizeof(char)*30);
 	 char channel[5];
 
 
@@ -223,19 +223,19 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
   //     HAL_GPIO_WritePin(BRD_D7_GPIO_PORT, BRD_D7_PIN, rssii < 37.5);
   //     HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, rssii < 30);
   //  }
+   vPortFree(essid);
+   vPortFree(bssid);
  }
 
 
 void handle_data(char* data) {
   uint8_t pipe_no = 0, length = 0;
   char message[50];
-<<<<<<< HEAD
+
   memset(message, 0, 50);
   char trash;
-  sscanf(data, "%d,%d%c%s", &pipe_no, &length, &trash, message);
-  debug_printf("Received data! Pipe=%d, length=%d, message=%s\n", pipe_no, length, message);
 
-=======
+
   sscanf(data, "%d,%d:%s\n", pipe_no, length, message);
   //debug_printf("Received data! Pipe=%d, length=%d, message=%s\n", pipe_no, length, message);
   if(strncmp(message, "TS:[", 4) == 0){
@@ -245,7 +245,7 @@ void handle_data(char* data) {
   } else if(strncmp(message, "TE:[", 4) == 0){
     debug_printf("Message received: %s\n", message + 4);
   }
->>>>>>> eeb5b2201728498ad047da3c8bef2ca3ce6f3b70
+
 }
 
 //############################ HELPER FUNCTIONS ###############################

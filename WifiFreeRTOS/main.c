@@ -27,6 +27,7 @@
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
+//extern typedef struct Ap Access_Point;
 
 
 /* Private function prototypes -----------------------------------------------*/
@@ -80,7 +81,7 @@ int main( void ) {
   */
 void Testing_Task( void ) {
 	char SSID[50];
-
+	int i;
 	Wifi_reset();
 
 	debug_printf("I AM NODE %d\n\n", NODE_ID);
@@ -114,6 +115,11 @@ void Testing_Task( void ) {
 		if (ap != NULL) {
 			debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
 		}
+//		Access_Point* current_AP = Access_Points->HEAD;
+//		for (i = 0; i < Access_Points->size; i++) {
+//			debug_printf("Network %d: %s", i, current_AP->BSSID);
+//			current_AP = current_AP->next;
+//		}
 		/* Delay the task for 1000ms */
 		vTaskDelay(1000);
 	}
@@ -121,12 +127,12 @@ void Testing_Task( void ) {
 
 void Software_timer(){
 	for(;;){
-		vTaskDelay(10);
+		vTaskDelay(1);
 		time++;
 
-		if (time % 200 == 0){
+		if (time % 2000 == 0){
 					BRD_LEDOff();
-		} else if (time % 100 == 0){
+		} else if (time % 1000 == 0){
 			BRD_LEDOn();
 			debug_printf("###############    TIME:     %d\n\r", time);
 		}
