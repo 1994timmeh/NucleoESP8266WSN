@@ -76,7 +76,9 @@ void UART_Processor( void );
 
 // Starting functions
 void ESP8622_init( void );
+void dma_Init( void );
 void ESP8622_send_test( void );
+
 
 // Library functions
 void Wifi_reset( void );
@@ -102,6 +104,7 @@ void add_AP(Access_Point*);
 
 
 // Helpers
+uint8_t esp_Send(uint8_t*);
 void waitForPassed(int timeout);
 void waitForPrompt();
 void Delay(int x);
@@ -111,3 +114,4 @@ void handle_data(char* data);
 
 // Interrupts
 void UART1_IRQHandler(void);
+void UART1_DMA_TX_IRQHandler(void);
