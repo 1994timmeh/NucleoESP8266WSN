@@ -14,6 +14,7 @@
 #include "stm32f4xx_hal_conf.h"
 #include "debug_printf.h"
 #include "ESP8622.h"
+#include "Ultrasonic.h"
 #include "stddef.h"
 #include <stdio.h>
 
@@ -58,7 +59,7 @@ int main( void ) {
 
 	/* Start the task to flash the LED. */
 	xTaskCreate( (void *) &Testing_Task, (const signed char *) "TEST", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
-	xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY + 1, NULL );
+//	xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY + 1, NULL );
 
 	/* Start the scheduler.
 
@@ -81,6 +82,7 @@ int main( void ) {
   */
 void Testing_Task( void ) {
 	char SSID[50];
+<<<<<<< HEAD
 	int i;
 	Wifi_reset();
 
@@ -95,21 +97,39 @@ void Testing_Task( void ) {
 	// Wifi_join("NUCLEOWSN1", "");
 	//
 	Wifi_enserver();
+=======
+	Ultrasonic_init();
+>>>>>>> 5e2024bab9095226f088b9f76e6b7a5301a7655c
 	//
-	// Wifi_get_station_IP();
+	// Wifi_reset();
 	//
-	Wifi_get_AP_IP();
+	// debug_printf("I AM NODE %d\n\n", NODE_ID);
 	//
-	//Wifi_connectTCP("192.168.1.1", 8888);
+	// Wifi_setmode();
 	//
-	// Wifi_senddata("TS:[12345]\n\r", 10);
+	// sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
+	// Wifi_setAP(SSID,"password", 5, 0);
 	//
-	// Wifi_senddata("TE:[Test Data]\n\r", 14);
-	//
-	// Wifi_timesync();
+	// Wifi_set_AP_IP("192.168.1.1");
+	// // Wifi_join("NUCLEOWSN1", "");
+	// //
+	// Wifi_enserver();
+	// //
+	// // Wifi_get_station_IP();
+	// //
+	// Wifi_get_AP_IP();
+	// //
+	// //Wifi_connectTCP("192.168.1.1", 8888);
+	// //
+	// // Wifi_senddata("TS:[12345]\n\r", 10);
+	// //
+	// // Wifi_senddata("TE:[Test Data]\n\r", 14);
+	// //
+	// // Wifi_timesync();
 
 	for (;;) {
 		/* Toggle LED */
+<<<<<<< HEAD
 		//Wifi_listAPs();
 		Access_Point* ap = get_AP("Wu-Tang LAN");
 		if (ap != NULL) {
@@ -120,6 +140,14 @@ void Testing_Task( void ) {
 //			debug_printf("Network %d: %s", i, current_AP->BSSID);
 //			current_AP = current_AP->next;
 //		}
+=======
+		// //Wifi_listAPs();
+		// Access_Point* ap = (Access_Point*)get_AP("Wu-Tang LAN");
+		// if (ap != NULL) {
+		// 	debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
+		// }
+		Ultrasonic_start();
+>>>>>>> 5e2024bab9095226f088b9f76e6b7a5301a7655c
 		/* Delay the task for 1000ms */
 		vTaskDelay(1000);
 	}
@@ -130,9 +158,15 @@ void Software_timer(){
 		vTaskDelay(1);
 		time++;
 
+<<<<<<< HEAD
 		if (time % 2000 == 0){
 					BRD_LEDOff();
 		} else if (time % 1000 == 0){
+=======
+		if (time % 200 == 0){
+			BRD_LEDOff();
+		} else if (time % 100 == 0){
+>>>>>>> 5e2024bab9095226f088b9f76e6b7a5301a7655c
 			BRD_LEDOn();
 			debug_printf("###############    TIME:     %d\n\r", time);
 		}

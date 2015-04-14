@@ -12,6 +12,7 @@
 #define FALSE 0
 
 UART_HandleTypeDef UART_Handler;
+DMA_HandleTypeDef hdma_tx;
 QueueHandle_t Data_Queue;	/* Queue used */
 QueueHandle_t Data_Queue;	/* Queue used */
 
@@ -23,6 +24,8 @@ uint8_t line_buffer_index = 0;
 
 char ip_addr_string[20];
 char uart_buffer[100];
+
+uint8_t* uart_tx_buffer;
 
 extern uint32_t time;
 
@@ -98,6 +101,8 @@ void 	ESP8622_init( void ){
 
   HAL_UART_Init(&UART_Handler);
 
+  dma_Init();
+
   /*  Enable RXNE interrupt on USART_1 */
   if (HAL_UART_Receive_IT((UART_HandleTypeDef*)&UART_Handler, (uint8_t *)uart_buffer, 100) != HAL_OK) {
 	  debug_printf("UART Interrupt init FAIL");
@@ -111,6 +116,52 @@ void 	ESP8622_init( void ){
   Access_Points->HEAD = NULL;
   Access_Points->TAIL = NULL;
 }
+
+void dma_Init(void) {
+	  /*##-1- Enable peripherals and GPIO Clocks #################################*/
+
+	  /* Enable DMA1 clock */
+	  __HAL_RCC_DMA1_CLK_ENABLE();
+
+	  /*##-3- Configure the DMA streams ##########################################*/
+	  /* Configure the DMA handler for Transmission process */
+	  hdma_tx.Instance                 = DMA1_Stream4;
+	  hdma_tx.Init.Channel             = DMA_CHANNEL_0;
+	  hdma_tx.Init.Direction           = DMA_MEMORY_TO_PERIPH;
+	  hdma_tx.Init.PeriphInc           = DMA_PINC_DISABLE;
+	  hdma_tx.Init.MemInc              = DMA_MINC_ENABLE;
+	  hdma_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+	  hdma_tx.Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
+	  hdma_tx.Init.Mode                = DMA_NORMAL;
+	  hdma_tx.Init.Priority            = DMA_PRIORITY_LOW;
+	  hdma_tx.Init.FIFOMode            = DMA_FIFOMODE_DISABLE;
+	  hdma_tx.Init.FIFOThreshold       = DMA_FIFO_THRESHOLD_FULL;
+	  hdma_tx.Init.MemBurst            = DMA_MBURST_INC4;
+	  hdma_tx.Init.PeriphBurst         = DMA_PBURST_INC4;
+
+	  HAL_DMA_(DMA1_Stream2, DMA_IT_TC, ENABLE);
+
+	  HAL_DMA_Init(&hdma_tx);
+
+	  /* Associate the initialized DMA handle to the the UART handle */
+	  //__HAL_LINKDMA(SpiHandle, hdmatx, hdma_tx);
+
+	  UART_Handler.hdmatx = &hdma_tx;
+	  hdma_tx.Parent = &UART_Handler;
+
+	  /*##-4- Configure the NVIC for DMA #########################################*/
+	  /* NVIC configuration for DMA transfer complete interrupt (UART1_TX) */
+	  HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 10, 1);
+	  HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
+
+	  NVIC_SetVector(DMA1_Stream4_IRQn, (uint32_t)&UART1_DMA_TX_IRQHandler);
+
+	  /* initialise UART_Buffer	*/
+	  uart_tx_buffer = pvPortMalloc(sizeof(uint8_t)* 100);
+	  esp_Send("test");
+}
+
+
 
 /*
  * Task for processing UART data and adding new data to a data queue
@@ -172,7 +223,7 @@ void UART1_IRQHandler(void)
     		line_buffer[line_buffer_index] = c;
     		line_buffer_index++;
     	} else if (index != 0) {
-    			xQueueSendToBackFromISR(Data_Queue, line_buffer, ( portTickType ) 4 );
+    			xQueueSendToBackFromISR(Data_Queue, line_buffer, ( BaseType_t* ) 4 );
     			// clear line buffer
     			memset(line_buffer, 0, 100);
     			line_buffer_index = 0;
@@ -180,6 +231,31 @@ void UART1_IRQHandler(void)
     } else {	// cleanup other flags
     	HAL_UART_IRQHandler((UART_HandleTypeDef *)&UART_Handler);
     }
+}
+
+
+
+/**
+  * @brief  This function handles DMA Tx interrupt request.
+  * @param  None
+  * @retval None
+  */
+void UART1_DMA_TX_IRQHandler(void)
+{
+	//TODO give back semaphore
+
+  HAL_DMA_IRQHandler(UART_Handler.hdmatx);
+
+
+}
+
+uint8_t esp_Send(uint8_t* send_String) {
+	uint8_t l = strlen(send_String);
+	memcpy(send_String, uart_tx_buffer, l);
+	if (HAL_UART_Transmit_DMA(&UART_Handler, (uint8_t*)uart_tx_buffer, l) != HAL_OK) {
+		return 0;
+	}
+	return 1;
 }
 
 void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:45:a2:ea:92",6)
