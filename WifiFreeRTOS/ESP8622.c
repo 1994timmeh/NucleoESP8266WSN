@@ -139,7 +139,7 @@ void dma_Init(void) {
 	  hdma_tx.Init.MemBurst            = DMA_MBURST_INC4;
 	  hdma_tx.Init.PeriphBurst         = DMA_PBURST_INC4;
 
-	  HAL_DMA_(DMA1_Stream2, DMA_IT_TC, ENABLE);
+	  //HAL_DMA_(DMA1_Stream2, DMA_IT_TC, ENABLE);
 
 	  HAL_DMA_Init(&hdma_tx);
 
