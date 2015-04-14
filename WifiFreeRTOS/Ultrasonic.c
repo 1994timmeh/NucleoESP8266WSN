@@ -10,6 +10,7 @@ static uint16_t Last_distance = 0;
   * Initialises pins and timers for ultrasonic ranger
   */
 void Ultrasonic_init(){
+  uint16_t PrescalerValue = 0;
   __TIM3_CLK_ENABLE();
 
   __BRD_D11_GPIO_CLK();
@@ -29,25 +30,25 @@ void Ultrasonic_init(){
 
   /* Configure the D0 pin with TIM3 input capture */
   GPIO_InitStructure.Pin = BRD_D11_PIN;				//Pin
-  GPIO_InitStructure.Mode = GPIO_MODE_AF_PP; 		//Set mode to be output alternate
+  GPIO_InitStructure.Mode =GPIO_MODE_AF_PP; 		//Set mode to be output alternate
   GPIO_InitStructure.Pull = GPIO_NOPULL;			//Enable Pull up, down or no pull resister
   GPIO_InitStructure.Speed = GPIO_SPEED_FAST;			//Pin latency
   GPIO_InitStructure.Alternate = GPIO_AF2_TIM3;	//Set alternate function to be timer 2
   HAL_GPIO_Init(BRD_D11_GPIO_PORT, &GPIO_InitStructure);	//Initialise Pin
 
-  /* Compute the prescaler value. SystemCoreClock = 168000000 - set for 1Mhz clock */
-  uint32_t PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 1000000) - 1;
+  /* Compute the prescaler value. SystemCoreClock = 168000000 - set for 50Khz clock */
+  PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 50000) - 1;
 
   /* Configure Timer 3 settings */
   TIM_IC_Init.Instance = TIM3;					//Enable Timer 3
-  TIM_IC_Init.Init.Period = 2*100000;			//Set for 10ms (10Hz) period
+  TIM_IC_Init.Init.Period = 2*50000/10;			//Set for 100ms (10Hz) period
   TIM_IC_Init.Init.Prescaler = PrescalerValue;	//Set presale value
   TIM_IC_Init.Init.ClockDivision = 0;			//Set clock division
-  TIM_IC_Init.Init.RepetitionCounter = 0;		// Set Reload Value
+  TIM_IC_Init.Init.RepetitionCounter = 0; 		// Set Reload Value
   TIM_IC_Init.Init.CounterMode = TIM_COUNTERMODE_UP;	//Set timer to count up.
 
   /* Configure TIM3 Input capture */
-  TIM_ICInitStructure.ICPolarity = TIM_ICPOLARITY_BOTHEDGE;			//Set to trigger on rising edge
+  TIM_ICInitStructure.ICPolarity = TIM_ICPOLARITY_RISING;			//Set to trigger on rising edge
   TIM_ICInitStructure.ICSelection = TIM_ICSELECTION_DIRECTTI;
   TIM_ICInitStructure.ICPrescaler = TIM_ICPSC_DIV1;
   TIM_ICInitStructure.ICFilter = 0;
@@ -76,19 +77,20 @@ void tim3_irqhandler(void) {
   unsigned int input_capture_value;
   //Clear Input Capture Flag
   __HAL_TIM_CLEAR_IT(&TIM_IC_Init, TIM_IT_TRIGGER);
+
   debug_printf("Interupt triggered\n");
-  //
-  // /* Read and display the Input Capture value of Timer 3, channel 2 */
-  // input_capture_value = HAL_TIM_ReadCapturedValue(&TIM_IC_Init, TIM_CHANNEL_2);
-  //
-  // //If time is > 30 there was nothing detected
-  // if(input_capture_value < 30){
-  //   float dist_cm = input_capture_value/58;
-  //   debug_printf("Distance: %dcm\n", (int)dist_cm);
-  //   Last_distance = dist_cm;
-  // }
-  //
-  // debug_printf("Time: %d\n", (int)input_capture_value);
+
+  /* Read and display the Input Capture value of Timer 3, channel 2 */
+  input_capture_value = HAL_TIM_ReadCapturedValue(&TIM_IC_Init, TIM_CHANNEL_2);
+
+  //If time is > 30 there was nothing detected
+  if(input_capture_value < 30){
+    float dist_cm = input_capture_value/58;
+    debug_printf("Distance: %dcm\n", (int)dist_cm);
+    Last_distance = dist_cm;
+  }
+
+  debug_printf("Time: %d\n", (int)input_capture_value);
 }
 
 int Ultrasonic_getdist(){
