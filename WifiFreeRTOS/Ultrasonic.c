@@ -92,7 +92,6 @@ void tim3_irqhandler(void) {
   }
 
   last_edge = edge;
-  BRD_LEDToggle();
 }
 
 uint16_t Ultrasonic_getdist(){
@@ -112,6 +111,15 @@ void Ultrasonic_start(){
   uDelay(SEC*0.000014); //10uS hopefully
   HAL_GPIO_WritePin(BRD_D12_GPIO_PORT, BRD_D12_PIN, 0);
 }
+
+
+
+void handle_Ultrasonic_Data(uint8_t node, uint8_t* data_String){
+	debug_printf("Ultrasonic data from Node: %d - %dcm\n\r", node, atoi(data_String));
+
+}
+
+
 
 /**
   * @brief  Delay Function.

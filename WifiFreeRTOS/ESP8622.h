@@ -90,6 +90,8 @@ void Wifi_senddata(uint8_t pipe_no, char data[50], int length);
 void Wifi_checkfirmware();
 void Wifi_connectTCP( char ip[50], int port);
 void Wifi_timesync();
+void handle_RSSI_Data(uint8_t node, uint8_t* data_String);
+
 
 void Wifi_get_station_IP();
 void Wifi_get_AP_IP();
