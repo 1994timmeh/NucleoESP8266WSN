@@ -86,8 +86,10 @@ void tim3_irqhandler(void) {
 
   int difference = edge - last_edge;
 
-  Last_distance = (int)(difference/58);
-  last_width = difference;
+  if(difference < 30000 && difference > 0){
+    Last_distance = (int)(difference/58);
+    last_width = difference;
+  }
 
   last_edge = edge;
   BRD_LEDToggle();

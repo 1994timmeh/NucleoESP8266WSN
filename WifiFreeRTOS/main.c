@@ -122,6 +122,8 @@ void Testing_Task( void ) {
 		// 	debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
 		// }
 		Ultrasonic_start();
+		vTaskDelay(100);
+		
 		debug_printf("Distance: %d\n", Ultrasonic_getdist());
 		debug_printf("Width: %d\n",Ultrasonic_getwidth());
 
