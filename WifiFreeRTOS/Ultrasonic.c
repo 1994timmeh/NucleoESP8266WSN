@@ -2,12 +2,14 @@
 #include "board.h"
 #include "stm32f4xx_hal_conf.h"
 #include "debug_printf.h"
+#include <stdint.h>
 
 GPIO_InitTypeDef GPIO_InitStructure;
 TIM_IC_InitTypeDef  TIM_ICInitStructure;
 TIM_HandleTypeDef TIM_IC_Init;
 uint16_t Last_distance = 0;
 uint16_t last_edge = 0;
+uint16_t last_width = 0;
 
 /**
   * Initialises pins and timers for ultrasonic ranger
@@ -38,11 +40,11 @@ void Ultrasonic_init(){
   HAL_GPIO_Init(BRD_D11_GPIO_PORT, &GPIO_InitStructure);	//Initialise Pin
 
   /* Compute the prescaler value. SystemCoreClock = 168000000 - set for 50Khz clock */
-  PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 50000) - 1;
+  PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 500000) - 1;
 
   /* Configure Timer 3 settings */
   TIM_IC_Init.Instance = TIM3;					//Enable Timer 3
-  TIM_IC_Init.Init.Period = 1;			//Set for 100ms (10Hz) period
+  TIM_IC_Init.Init.Period = 100000;			//Set for 100ms (10Hz) period
   TIM_IC_Init.Init.Prescaler = PrescalerValue;	//Set presale value
   TIM_IC_Init.Init.ClockDivision = 0;			//Set clock division
   TIM_IC_Init.Init.RepetitionCounter = 0; 		// Set Reload Value
@@ -82,31 +84,33 @@ void tim3_irqhandler(void) {
   /* Read and display the Input Capture value of Timer 3, channel 2 */
   int edge = HAL_TIM_ReadCapturedValue(&TIM_IC_Init, TIM_CHANNEL_2);
 
-  debug_printf("Edge: %d\n", edge);
-
   int difference = edge - last_edge;
-  int dist_cm = (int)(difference/58);
 
-  Last_distance = difference;
+  if(difference < 30000 && difference > 0){
+    Last_distance = (int)(difference/58);
+    last_width = difference;
+  }
+
   last_edge = edge;
-
   BRD_LEDToggle();
 }
 
-int Ultrasonic_getdist(){
+uint16_t Ultrasonic_getdist(){
   return Last_distance;
+}
+
+uint16_t Ultrasonic_getwidth(){
+  return last_width;
 }
 
 /**
   * Starts ranging
   */
 void Ultrasonic_start(){
-  debug_printf("Starting Ultrasonic ranging - 1\n");
   HAL_GPIO_WritePin(BRD_D12_GPIO_PORT, BRD_D12_PIN, 1);
   //TODO Check this with logic analyzer
   uDelay(SEC*0.000014); //10uS hopefully
   HAL_GPIO_WritePin(BRD_D12_GPIO_PORT, BRD_D12_PIN, 0);
-  debug_printf("Starting Ultrasonic ranging - 2\n");
 }
 
 /**

@@ -85,26 +85,26 @@ int main( void ) {
 void Testing_Task( void ) {
 	char SSID[50];
 
-	//Ultrasonic_init();
-	debug_printf("Begin testing\n\n");
-
-	 Wifi_reset();
-
-	 debug_printf("I AM NODE %d\n\n", NODE_ID);
-
-	 Wifi_setmode();
-
-	 sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
-	 Wifi_setAP(SSID,"password", 5, 0);
-
-	 Wifi_set_AP_IP("192.168.1.1");
-	 // Wifi_join("NUCLEOWSN1", "");
-	 //
-	 Wifi_enserver();
-	 //
-	 // Wifi_get_station_IP();
-	 //
-	 Wifi_get_AP_IP();
+	Ultrasonic_init();
+	// debug_printf("Begin testing\n\n");
+	//
+	//  Wifi_reset();
+	//
+	//  debug_printf("I AM NODE %d\n\n", NODE_ID);
+	//
+	//  Wifi_setmode();
+	//
+	//  sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
+	//  Wifi_setAP(SSID,"password", 5, 0);
+	//
+	//  Wifi_set_AP_IP("192.168.1.1");
+	//  // Wifi_join("NUCLEOWSN1", "");
+	//  //
+	//  Wifi_enserver();
+	//  //
+	//  // Wifi_get_station_IP();
+	//  //
+	//  Wifi_get_AP_IP();
 	 //
 	 //Wifi_connectTCP("192.168.1.1", 8888);
 	 //
@@ -122,7 +122,10 @@ void Testing_Task( void ) {
 		// 	debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
 		// }
 		Ultrasonic_start();
+		vTaskDelay(100);
+		
 		debug_printf("Distance: %d\n", Ultrasonic_getdist());
+		debug_printf("Width: %d\n",Ultrasonic_getwidth());
 
 		/* Delay the task for 1000ms */
 		vTaskDelay(1000);
