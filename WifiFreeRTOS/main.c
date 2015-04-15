@@ -37,8 +37,9 @@ void ApplicationIdleHook( void ); /* The idle hook is used to blink the Blue 'Al
 void LED_Task( void );
 void Testing_Task( void );
 void Software_timer( void );
-
-uint32_t time = 0;
+void node_Scan();
+void node_Send();
+int32_t time_Offset = 0;	// time offset relative to master -time means infront
 
 /* Task Priorities ------------------------------------------------------------*/
 #define mainLED_PRIORITY					( tskIDLE_PRIORITY + 2 )
@@ -61,7 +62,7 @@ int main( void ) {
 
 	/* Start the task to flash the LED. */
 	xTaskCreate( (void *) &Testing_Task, (const signed char *) "TEST", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
-//	xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY + 1, NULL );
+	xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY + 1, NULL );
 
 	/* Start the scheduler.
 
@@ -138,20 +139,75 @@ void USART_Tx_Task( void ) {
 
 
 void Software_timer(){
-	for(;;){
-		vTaskDelay(1);
-		time++;
+	uint16_t ledsync  = 0;
+	uint16_t node_Sync  = 0;
+	uint8_t flag  = 1;
+	uint8_t node_scan = 0;
+	uint8_t nodes_send = 0;
 
+	uint16_t node_period = 10000;
+	// time variable is
+	for (;;) {
 
-		if (time % 2000 == 0){
-					BRD_LEDOff();
-		} else if (time % 1000 == 0){
+		ledsync = ((xTaskGetTickCount()+time_Offset) % 1000);
+		node_Sync = ((xTaskGetTickCount()+time_Offset) % node_period);
 
-			BRD_LEDOn();
-			debug_printf("###############    TIME:     %d\n\r", time);
+		/*	led sync	*/
+		if (ledsync > (500 / portTICK_RATE_MS) && flag == 1) {
+			//debug_printf("IDLE Tick %d\n", xLastTx);
+			flag = 0;
+			BRD_LEDToggle();
+
 		}
+		if (ledsync < (10 / portTICK_RATE_MS) && flag == 0) {
+			flag = 1;
+		}
+
+
+
+		/*		node sync		*/
+
+		if (node_Sync > ((NODE_ID*3000) / portTICK_RATE_MS) && node_scan == 1) {
+			//debug_printf("IDLE Tick %d\n", xLastTx);
+			node_scan = 0;
+			node_Scan();
+
+		}
+		if (node_Sync < (10 / portTICK_RATE_MS) && node_scan == 0) {
+			node_scan = 1;
+		}
+
+		if (node_Sync % 2000 > 1980 && nodes_send == 1) {
+			//debug_printf("IDLE Tick %d\n", xLastTx);
+			nodes_send = 0;
+			node_Send();
+
+		}
+		if (node_Sync % 2000 < 20 && nodes_send == 0) {
+			nodes_send = 1;
+		}
+
+
+
+		vTaskDelay(1);
 	}
 }
+
+
+
+void node_Scan() {
+	Wifi_listAPs();
+	 Access_Point* ap = (Access_Point*)get_AP("Wu-Tang LAN");
+	 if (ap != NULL) {
+		debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
+	 }
+}
+
+
+void node_Send() {
+
+}
+
 
 /**
   * @brief  Hardware Initialisation.

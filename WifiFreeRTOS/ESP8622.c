@@ -36,7 +36,7 @@ char uart_buffer[100];
 
 uint8_t* uart_tx_buffer;
 
-extern uint32_t time;
+extern int32_t time_Offset;
 
 APs* Access_Points;
 
@@ -348,7 +348,7 @@ void handle_data(char* data) {
   if(strncmp(message, "TS:[", 4) == 0){
     char new_time[10];
     sscanf(message, "TS:[%[^]]]", new_time);
-    time = (uint32_t)atoi(new_time);
+    time_Offset = (uint32_t)atoi(new_time) - xTaskGetTickCount();
   } else if(strncmp(message, "TE:[", 4) == 0){
     debug_printf("Message received: %s\n", message + 4);
   } else if(strncmp(message, "DA:[", 4) == 0){
@@ -609,7 +609,7 @@ void Wifi_senddata(uint8_t pipe_no, char data[50], int length){
 
 void Wifi_timesync(){
   char data[25];
-  int len = sprintf(data, "TS:[%d]", time + 100);
+  int len = sprintf(data, "TS:[%d]", xTaskGetTickCount() + 100);
   Wifi_senddata(0, data, len);
 }
 
