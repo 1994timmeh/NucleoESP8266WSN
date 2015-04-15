@@ -23,7 +23,7 @@
 #include "task.h"
 #include "queue.h"
 
-#define NODE_ID 2
+#define NODE_ID 3
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
@@ -114,20 +114,21 @@ void Testing_Task( void ) {
 		Wifi_listAPs();
 		Access_Point* ap = (Access_Point*)get_AP("NUCLEOWSN1");
 		if (ap != NULL) {
-		   debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
+		   //debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
 		}
 
 		Ultrasonic_start();
-		vTaskDelay(100);
-
-		int len = sprintf(&buffer, "DA:[125%d]", Ultrasonic_getdist());
+		// vTaskDelay(1000);
+		//
+		// // int len = sprintf(&buffer, "DA:[125%d]", Ultrasonic_getdist());
+		// // Wifi_senddata(0, buffer, len);
+		//
+		// vTaskDelay(1000);
+		//
+		int len = sprintf(&buffer, "DA:[124%d]", ap->RSSI);
 		Wifi_senddata(0, buffer, len);
 
-		vTaskDelay(1000);
-
-		len = sprintf(&buffer, "DA:[124%d]", ap->RSSI);
-		Wifi_senddata(0, buffer, len);
-
+		debug_printf("RSSI: %d\n", ap->RSSI);
 		debug_printf("Distance: %d\n", Ultrasonic_getdist());
 		debug_printf("Width: %d\n",Ultrasonic_getwidth());
 
