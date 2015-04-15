@@ -353,23 +353,39 @@ void handle_data(char* data) {
     debug_printf("Message received: %s\n", message + 4);
   } else if(strncmp(message, "DA:[", 4) == 0){
 	    debug_printf("Data received: %s\n", message + 4);
-	    handle_Messages(message + 4);
+	    handle_Messages(pipe_no, message + 4);
   }
 
 }
 
-void handle_Messages(uint8_t* message) {
+void handle_Messages(uint8_t pipe_no, uint8_t* message) {
 	uint8_t l = 0, dest, source, type;
+	uint8_t* data_String = pvPortMalloc(sizeof(uint8_t)*30);
+	uint8_t c, i;
 	if (*message < 0x30 || *message > 0x39 || (l = strlen(message)) < 4) {
 		debug_printf("Invalid data: %s\n\r", message);
 		return;
 	}
-	dest = atoi(*(message+1));
-	source = atoi(*(message+2));
-	type = atoi(*(message+3));
+	dest = *(message++) - '0';
+	source = *(message++) - '0';
+	type = *(message++) - '0';
+	debug_printf("Pipe: %d\n\r", pipe_no);
 	debug_printf("Destination: %d\n\r", dest);
 	debug_printf("Source: %d\n\r", source);
 	debug_printf("Type: %d\n\r", type);
+	i = 0;
+	do {
+		c = *(message++);
+		if (c != ']') {
+			*(data_String+(i++)) = c;
+
+		} else {
+			*(data_String+(i++)) = 0;
+			break;
+		}
+	} while (c);
+
+	debug_printf("Data received: %s\n\r", data_String);
 
 }
 
@@ -557,11 +573,13 @@ void Wifi_connectTCP( char ip[50], int port){
   waitForPassed(5000);
 }
 
-void Wifi_senddata(char data[50], int length){
+void Wifi_senddata(uint8_t pipe_no, char data[50], int length){
   char command[50];
   char send_data[50];
-
-  int len = sprintf(command, WIFI_CMD_SEND_DATA, length);
+//  char tmp[20];
+//
+//  int len = sprintf(tmp, WIFI_CMD_SEND_DATA, length);
+  int len = sprintf(command, WIFI_CMD_SEND_DATA, pipe_no, length);
 
   debug_printf("Sending data\n");
 
@@ -579,7 +597,7 @@ void Wifi_senddata(char data[50], int length){
 void Wifi_timesync(){
   char data[25];
   int len = sprintf(data, "TS:[%d]", time + 100);
-  Wifi_senddata(data, len);
+  Wifi_senddata(0, data, len);
 }
 
 
