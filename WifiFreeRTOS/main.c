@@ -116,13 +116,13 @@ void Testing_Task( void ) {
 
 	for (;;) {
 		/* Toggle LED */
-
-		 Wifi_listAPs();
-		 Access_Point* ap = (Access_Point*)get_AP("Wu-Tang LAN");
-		 if (ap != NULL) {
-		 	debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
-		 }
-		//Ultrasonic_start();
+		// //Wifi_listAPs();
+		// Access_Point* ap = (Access_Point*)get_AP("Wu-Tang LAN");
+		// if (ap != NULL) {
+		// 	debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
+		// }
+		Ultrasonic_start();
+		debug_printf("Distance: %d\n", Ultrasonic_getdist());
 
 		/* Delay the task for 1000ms */
 		vTaskDelay(1000);
