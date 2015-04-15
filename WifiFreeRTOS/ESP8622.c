@@ -351,7 +351,25 @@ void handle_data(char* data) {
     time = (uint32_t)atoi(new_time);
   } else if(strncmp(message, "TE:[", 4) == 0){
     debug_printf("Message received: %s\n", message + 4);
+  } else if(strncmp(message, "DA:[", 4) == 0){
+	    debug_printf("Data received: %s\n", message + 4);
+	    handle_Messages(message + 4);
   }
+
+}
+
+void handle_Messages(uint8_t* message) {
+	uint8_t l = 0, dest, source, type;
+	if (*message < 0x30 || *message > 0x39 || (l = strlen(message)) < 4) {
+		debug_printf("Invalid data: %s\n\r", message);
+		return;
+	}
+	dest = atoi(*(message+1));
+	source = atoi(*(message+2));
+	type = atoi(*(message+3));
+	debug_printf("Destination: %d\n\r", dest);
+	debug_printf("Source: %d\n\r", source);
+	debug_printf("Type: %d\n\r", type);
 
 }
 
