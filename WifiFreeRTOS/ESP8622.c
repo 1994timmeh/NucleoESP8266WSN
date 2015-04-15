@@ -387,6 +387,19 @@ void handle_Messages(uint8_t pipe_no, uint8_t* message) {
 
 	debug_printf("Data received: %s\n\r", data_String);
 
+
+	if ( type == 5) {
+		handle_Ultrasonic_Data(source, data_String);
+	}
+	if ( type == 4) {
+			handle_RSSI_Data(source, data_String);
+	}
+
+}
+
+
+void handle_RSSI_Data(uint8_t node, uint8_t* data_String) {
+	debug_printf("RSSI data from Node: %d - %d\n\r", node, atoi(data_String));
 }
 
 //############################ HELPER FUNCTIONS ###############################

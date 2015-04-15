@@ -112,6 +112,15 @@ void Ultrasonic_start(){
   HAL_GPIO_WritePin(BRD_D12_GPIO_PORT, BRD_D12_PIN, 0);
 }
 
+
+
+void handle_Ultrasonic_Data(uint8_t node, uint8_t* data_String){
+	debug_printf("Ultrasonic data from Node: %d - %dcm\n\r", node, atoi(data_String));
+
+}
+
+
+
 /**
   * @brief  Delay Function.
   * @param  nCount:specifies the Delay time length.
