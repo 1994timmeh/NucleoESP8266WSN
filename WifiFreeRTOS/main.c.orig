@@ -22,17 +22,13 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
-#include "semphr.h"
 
-#define NODE_ID 1
+#define NODE_ID 2
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 //extern typedef struct Ap Access_Point;
-int8_t client_Pipe = -1;
-int32_t time_Offset = 0;	// time offset relative to master -time means infront
-SemaphoreHandle_t esp_Semaphore;
 
 
 /* Private function prototypes -----------------------------------------------*/
@@ -43,7 +39,7 @@ void Testing_Task( void );
 void Software_timer( void );
 void node_Scan();
 void node_Send();
-
+int32_t time_Offset = 0;	// time offset relative to master -time means infront
 
 /* Task Priorities ------------------------------------------------------------*/
 #define mainLED_PRIORITY					( tskIDLE_PRIORITY + 2 )
@@ -63,7 +59,6 @@ int main( void ) {
 	BRD_init();
 	Hardware_init();
 	ESP8622_init(); //This initiates another task
-	esp_Semaphore = xSemaphoreCreateMutex();
 
 	/* Start the task to flash the LED. */
 	xTaskCreate( (void *) &Testing_Task, (const signed char *) "TEST", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
@@ -101,41 +96,41 @@ void Testing_Task( void ) {
 
 	 Wifi_setmode();
 
-	  sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
-	  Wifi_setAP(SSID,"password", 5, 0);
+	//  sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
+	//  Wifi_setAP(SSID,"password", 5, 0);
 
-	  Wifi_set_AP_IP("192.168.1.1");
+	//  Wifi_set_AP_IP("192.168.1.1");
 
-	 //Wifi_join("NUCLEOWSN1", "");
+	 Wifi_join("NUCLEOWSN1", "");
 
 	 Wifi_enserver();
 	 Wifi_get_AP_IP();
 
-	 //Wifi_connectTCP("192.168.1.1", 8888);
+	 Wifi_connectTCP("192.168.1.1", 8888);
 
-	//Wifi_timesync();
+	 Wifi_timesync();
 
 	for (;;) {
 		/* Toggle LED */
-//		Wifi_listAPs();
-//		Access_Point* ap = (Access_Point*)get_AP("NUCLEOWSN1");
-//		if (ap != NULL) {
-//		   debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
-//		}
-//
-//		Ultrasonic_start();
-//		vTaskDelay(100);
+		Wifi_listAPs();
+		Access_Point* ap = (Access_Point*)get_AP("NUCLEOWSN1");
+		if (ap != NULL) {
+		   debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
+		}
 
-//		int len = sprintf(&buffer, "DA:[125%d]", Ultrasonic_getdist());
-//		Wifi_senddata(0, buffer, len);
-//
-//		vTaskDelay(1000);
-//
-//		len = sprintf(&buffer, "DA:[124%d]", ap->RSSI);
-//		Wifi_senddata(0, buffer, len);
-//
-//		debug_printf("Distance: %d\n", Ultrasonic_getdist());
-//		debug_printf("Width: %d\n",Ultrasonic_getwidth());
+		Ultrasonic_start();
+		vTaskDelay(100);
+
+		int len = sprintf(&buffer, "DA:[125%d]", Ultrasonic_getdist());
+		Wifi_senddata(0, buffer, len);
+
+		vTaskDelay(1000);
+
+		len = sprintf(&buffer, "DA:[124%d]", ap->RSSI);
+		Wifi_senddata(0, buffer, len);
+
+		debug_printf("Distance: %d\n", Ultrasonic_getdist());
+		debug_printf("Width: %d\n",Ultrasonic_getwidth());
 
 		/* Delay the task for 1000ms */
 		vTaskDelay(1000);
@@ -159,6 +154,7 @@ void Software_timer(){
 	// time variable is
 	for (;;) {
 
+<<<<<<< HEAD
 		ledsync = ((xTaskGetTickCount()+time_Offset) % 1000);
 		node_Sync = ((xTaskGetTickCount()+time_Offset) % node_period);
 
@@ -185,6 +181,14 @@ void Software_timer(){
 		}
 		if (node_Sync < (10 / portTICK_RATE_MS) && node_scan == 0) {
 			node_scan = 1;
+=======
+
+		if (time % 2000 == 0){
+			BRD_LEDOff();
+		} else if (time % 1000 == 0){
+
+			BRD_LEDOn();
+>>>>>>> 0cb6c66f3ca19fdf31f45b9fe432f5582873cba9
 		}
 
 		if (node_Sync % 2000 > 1980 && nodes_send == 1) {
@@ -206,16 +210,11 @@ void Software_timer(){
 
 
 void node_Scan() {
-	if (esp_Semaphore != NULL) {
-		if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
-			Wifi_listAPs();
-			 Access_Point* ap = (Access_Point*)get_AP("Wu-Tang LAN");
-			 if (ap != NULL) {
-				debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
-			 }
-			 xSemaphoreGive(esp_Semaphore);
-		}
-	}
+	Wifi_listAPs();
+	 Access_Point* ap = (Access_Point*)get_AP("Wu-Tang LAN");
+	 if (ap != NULL) {
+		debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
+	 }
 }
 
 
