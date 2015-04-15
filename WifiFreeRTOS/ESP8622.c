@@ -190,7 +190,7 @@ void UART_Processor( void ){
 
   for(;;){
       if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
-        debug_printf("LINE RX: %s\n", new_data);
+        //debug_printf("LINE RX: %s\n", new_data);
         //We have new data analyze it
         if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
           BRD_LEDToggle();

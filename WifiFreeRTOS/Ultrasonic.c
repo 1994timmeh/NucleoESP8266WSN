@@ -92,7 +92,6 @@ void tim3_irqhandler(void) {
   }
 
   last_edge = edge;
-  BRD_LEDToggle();
 }
 
 uint16_t Ultrasonic_getdist(){
