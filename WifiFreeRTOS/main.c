@@ -24,7 +24,8 @@
 #include "queue.h"
 #include "semphr.h"
 
-#define NODE_ID 1
+#define NODE_ID 3
+
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
@@ -117,25 +118,27 @@ void Testing_Task( void ) {
 
 	for (;;) {
 		/* Toggle LED */
-//		Wifi_listAPs();
-//		Access_Point* ap = (Access_Point*)get_AP("NUCLEOWSN1");
-//		if (ap != NULL) {
-//		   debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
-//		}
-//
-//		Ultrasonic_start();
-//		vTaskDelay(100);
+<<<<<<< HEAD
+		Wifi_listAPs();
+		Access_Point* ap = (Access_Point*)get_AP("NUCLEOWSN1");
+		if (ap != NULL) {
+		   //debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
+		}
 
-//		int len = sprintf(&buffer, "DA:[125%d]", Ultrasonic_getdist());
-//		Wifi_senddata(0, buffer, len);
-//
-//		vTaskDelay(1000);
-//
-//		len = sprintf(&buffer, "DA:[124%d]", ap->RSSI);
-//		Wifi_senddata(0, buffer, len);
-//
-//		debug_printf("Distance: %d\n", Ultrasonic_getdist());
-//		debug_printf("Width: %d\n",Ultrasonic_getwidth());
+		Ultrasonic_start();
+		// vTaskDelay(1000);
+		//
+		// // int len = sprintf(&buffer, "DA:[125%d]", Ultrasonic_getdist());
+		// // Wifi_senddata(0, buffer, len);
+		//
+		// vTaskDelay(1000);
+		//
+		int len = sprintf(&buffer, "DA:[124%d]", ap->RSSI);
+		Wifi_senddata(0, buffer, len);
+
+		debug_printf("RSSI: %d\n", ap->RSSI);
+		debug_printf("Distance: %d\n", Ultrasonic_getdist());
+		debug_printf("Width: %d\n",Ultrasonic_getwidth());
 
 		/* Delay the task for 1000ms */
 		vTaskDelay(1000);
@@ -273,7 +276,7 @@ void vApplicationIdleHook( void ) {
 		}
 	}
 }
-
+//Comment
 /**
   * @brief  vApplicationStackOverflowHook
   * @param  Task Handler and Task Name
