@@ -409,7 +409,8 @@ void handle_Messages(uint8_t pipe_no, uint8_t* message, uint8_t* raw_data) {
 
 
 	if ( type == 5) {
-		handle_Ultrasonic_Data(source, data_String);
+		handle_Ultrasonic_Data(source, data_String, raw_data);
+
 	}
 	if ( type == 4) {
 		handle_RSSI_Data(source, data_String,  raw_data);
