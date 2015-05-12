@@ -1,0 +1,9 @@
+#!/bin/bash
+if [ "$#" -ne 1 ]; then
+    echo "$0 <ELF File>"
+else
+	PORT=1234
+	echo "Starting qemu with GDB connection for binary \"$1\"."
+	echo "In GDB (arm-none-eabi-gdb), use \"target remote 127.0.0.1:$PORT\" to connect"
+	$NP2_QEMU/qemu-system-arm -M netduinoplus2 -nographic -kernel $1 -chardev stdio,mux=on,id=terminal -serial /dev/null -serial /dev/null -serial /dev/null -serial chardev:terminal -serial /dev/null -serial chardev:terminal -monitor chardev:terminal -S -gdb tcp::$PORT
+fi;

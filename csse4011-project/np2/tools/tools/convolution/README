@@ -1,0 +1,7 @@
+Convolutional Encoder Remote Logger / Playback system
+
+Start the program, and then connect to http://127.0.0.1:8081/ using a web browser.
+
+Send convolutionally encoded data to 127.0.0.1:8888 to log data.
+
+Playback data by typing in the NP2 IP address and port (TCP).
