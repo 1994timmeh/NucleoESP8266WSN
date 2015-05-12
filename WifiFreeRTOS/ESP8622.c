@@ -293,10 +293,10 @@ uint8_t esp_send(uint8_t* send_String) {
 //}
 
 void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:45:a2:ea:92",6)
-	 char zero;
+	 char zero = 0;
 	 char* essid = pvPortMalloc(sizeof(char)*30);
 	 char rssi[3];
-	 int rssii;
+	 int rssii = 0;
 	 char* bssid = pvPortMalloc(sizeof(char)*30);
 	 char channel[5];
 
@@ -342,14 +342,14 @@ void handle_data(char* data) {
 	uint8_t pipestr[10], lengthstr[10];
   uint8_t pipe_no = 0, length = 0;
   char message[50];
-  char raw_message = pvPortMalloc(sizeof(uint8_t)*50);
+  char* raw_message = pvPortMalloc(sizeof(uint8_t)*50);
   memset(message, 0, 50);
   char trash;
 
-  raw_message = strcpy(raw_message, message);
   sscanf(data, "%[^,],%[^:]:%s", pipestr, lengthstr, message);
   pipe_no = atoi(pipestr);
   length = atoi(lengthstr);
+  raw_message = strcpy(raw_message, message);
 
   //debug_printf("Received data! Pipe=%d, length=%d, message=%s\n", pipe_no, length, message);
   if(strncmp(message, "TS:[", 4) == 0){
@@ -362,6 +362,7 @@ void handle_data(char* data) {
 	    debug_printf("Data received: %s\n", message + 4);
 	    handle_Messages(pipe_no, message + 4, raw_message);
   }
+  vPortFree(raw_message);
 
 }
 
@@ -408,11 +409,13 @@ void handle_Messages(uint8_t pipe_no, uint8_t* message, uint8_t* raw_data) {
 
 
 	if ( type == 5) {
-		handle_Ultrasonic_Data(source, data_String);
+		handle_Ultrasonic_Data(source, data_String, raw_data);
+
 	}
 	if ( type == 4) {
 		handle_RSSI_Data(source, data_String,  raw_data);
 	}
+	vPortFree(data_String);
 
 }
 

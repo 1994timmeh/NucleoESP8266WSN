@@ -117,6 +117,8 @@ void Delay(int x);
 float RSSItoDistance(int rssi);
 void handle_Access_Point (char* apString);
 void handle_data(char* data);
+void handle_Messages(uint8_t pipe_no, uint8_t* message, uint8_t* raw_data);
+
 
 // Interrupts
 void UART1_IRQHandler(void);

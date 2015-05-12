@@ -11,6 +11,8 @@ uint16_t Last_distance = 0;
 uint16_t last_edge = 0;
 uint16_t last_width = 0;
 
+extern uint8_t client_Pipe;
+
 /**
   * Initialises pins and timers for ultrasonic ranger
   */
@@ -114,8 +116,15 @@ void Ultrasonic_start(){
 
 
 
-void handle_Ultrasonic_Data(uint8_t node, uint8_t* data_String){
+void handle_Ultrasonic_Data(uint8_t node, uint8_t* data_String, uint8_t* raw_data){
 	debug_printf("Ultrasonic data from Node: %d - %dcm\n\r", node, atoi(data_String));
+
+	/* forward to client	*/
+		if (client_Pipe >= 0 && client_Pipe <= 4) {
+			Wifi_senddata(client_Pipe, raw_data, strlen(raw_data));
+			/* HACK HERE	*/
+		}
+
 }
 
 
