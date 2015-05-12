@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.1)
 project(WifiFreeRTOS)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c90")
 
 set(SOURCE_FILES
     ESP8622.c
@@ -12,4 +12,11 @@ set(SOURCE_FILES
     Ultrasonic.c
     Ultrasonic.h)
 
-add_executable(WifiFreeRTOS ${SOURCE_FILES})
+cmake_minimum_required(VERSION 3.1)
+
+project(mytest)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+add_custom_target(mytest COMMAND make -C ${mytest_SOURCE_DIR}
+                         CLION_EXE_DIR=${PROJECT_BINARY_DIR})

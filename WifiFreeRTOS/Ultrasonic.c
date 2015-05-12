@@ -116,7 +116,6 @@ void Ultrasonic_start(){
 
 void handle_Ultrasonic_Data(uint8_t node, uint8_t* data_String){
 	debug_printf("Ultrasonic data from Node: %d - %dcm\n\r", node, atoi(data_String));
-
 }
 
 
