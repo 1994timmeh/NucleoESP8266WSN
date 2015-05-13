@@ -9,14 +9,27 @@ COMMON_PATH=$(NP2_ROOT)/src/Libraries/common
 CMSIS_PATH=$(NP2_ROOT)/src/Libraries/cmsis
 FREERTOS_PATH=$(NP2_ROOT)/src/FreeRTOS
 
+DSP_CMSIS_PATH=/home/csse3010/STM32Cube_FW_F4_V1.5.0/Drivers/CMSIS
+DSP_PATH=$(DSP_CMSIS_PATH)/DSP_Lib/Source
+
 PROJ_NAME=main
 
 SRCS = $(PROJ_NAME).c 
+SRCS += ./src/*.c
 SRCS += $(NP2_PATH)/src/*.c
 SRCS += $(STDPERPH_PATH)/src/*.c $(COMMON_PATH)/*.c
 SRCS += $(USBCORE_PATH)/Src/*.c $(USBCDC_PATH)/Src/*.c $(VCP_PATH)/src/*.c
 #SRCS += $(FREERTOS_PATH)/*.c $(FREERTOS_PATH)/portable/GCC/ARM_CM4F/*.c $(FREERTOS_PATH)/portable/MemMang/heap_1.c
 # all the files will be generated with this name (main.elf, main.bin, main.hex, etc)
+
+SRCS += $(DSP_PATH)/BasicMathFunctions/*.c
+SRCS += $(DSP_PATH)/ComplexMathFunctions/*.c
+SRCS += $(DSP_PATH)/FastMathFunctions/*.c
+SRCS += $(DSP_PATH)/CommonTables/*.c
+SRCS += $(DSP_PATH)/StatisticsFunctions/*.c
+SRCS += $(DSP_PATH)/SupportFunctions/*.c
+SRCS += $(DSP_PATH)/TransformFunctions/*.c
+SRCS += $(DSP_PATH)/TransformFunctions/*.S
 
 ###################################################
 
@@ -26,7 +39,8 @@ OBJCOPY=arm-none-eabi-objcopy
 CFLAGS  = -g -O1 -T$(NP2_PATH)/STM32F405.ld -Wmaybe-uninitialized
 CFLAGS += -mlittle-endian -mthumb -mcpu=cortex-m4 -mthumb-interwork
 CFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16
-
+CFLAGS += -DARM_MATH_CM4
+CFLAGS += -D__FPU_PRESENT
 ###################################################
 
 vpath %.c src
@@ -40,6 +54,9 @@ CFLAGS += -I$(CMSIS_PATH) -I$(NP2_PATH)/inc -I$(STDPERPH_PATH)/inc -I$(COMMON_PA
 CFLAGS += -DENABLE_VCP #Enable USB VCP for debug_printf
 #CFLAGS += -DENABLE_FRVCP #Enable USB VCP for debug_printf with FreeRTOS
 CFLAGS += -DENABLE_DEBUG_UART	#Enable UART4 for debug printf
+
+CFLAGS += -I./inc
+CFLAGS += -I$(DSP_CMSIS_PATH)/Include
 
 SRCS += $(NP2_PATH)/startup_STM32F40x.s # add startup file to build
 
