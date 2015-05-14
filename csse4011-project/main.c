@@ -26,8 +26,12 @@ ADC_ChannelConfTypeDef AdcChanConfig2;
 TIM_HandleTypeDef TIM_Init;
 
 int sampleNo = 0;
-volatile int data1[1000];
-volatile int data2[1000];
+
+//Temp storage for data as we fill the buffer
+uint32_t data1[1000];
+uint32_t data2[1000];
+
+uint16_t value = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 void Delay(__IO unsigned long nCount);
@@ -35,7 +39,9 @@ void hardware_init();
 void adc_switch_channel_0( void );
 void adc_switch_channel_1( void );
 void tim2_irqhandler( void );
-void timer_interupt_init();
+void timer_interupt_init( void );
+void DMACompleteISR( void );
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* AdcHandle);
 
 
 /**
@@ -48,21 +54,17 @@ int main(void) {
 
 	BRD_init();	//Initialise the NP2 board.
 	hardware_init();	//Initialise Hardware peripherals
-	timer_interupt_init();
+	//timer_interupt_init();
 
 	while (1) {
-		int i = 0, ht = 0;
-		for(i; i < 500; i++){
-			debug_printf("%X %X\n", data1[i], data2[i]);
-		}
+		Delay(0x1);
+		debug_printf("Bleh");
 	}
 }
 
 
 void timer_interupt_init(){
 	unsigned short PrescalerValue;
-
-	BRD_LEDInit();
 
 	/* Timer 4 clock enable */
 	__TIM4_CLK_ENABLE();
@@ -72,7 +74,7 @@ void timer_interupt_init(){
 
 	/* Time base configuration */
 	TIM_Init.Instance = TIM4;						//Enable Timer 4
-	TIM_Init.Init.Period = 20;						//Set period count to be 1ms, so timer interrupt occurs every 1ms.
+	TIM_Init.Init.Period = 10;						//Set period count to be 1ms, so timer interrupt occurs every 1ms.
 	TIM_Init.Init.Prescaler = PrescalerValue;		//Set presale value
 	TIM_Init.Init.ClockDivision = 0;				//Set clock division
 	TIM_Init.Init.RepetitionCounter = 0;			// Set Reload Value
@@ -96,37 +98,30 @@ void timer_interupt_init(){
 void tim2_irqhandler( void ){
 	//Clear Update Flag
 	__HAL_TIM_CLEAR_IT(&TIM_Init, TIM_IT_UPDATE);
-
-	//Start the conversion for both ADCs
 	HAL_ADC_Start(&AdcHandle1);
-	HAL_ADC_Start(&AdcHandle2);
-
-	//Wait for first ADC Conversion to complete
-	while (HAL_ADC_PollForConversion(&AdcHandle1, 1) != HAL_OK);
-	data1[sampleNo%1000] = (uint16_t)(HAL_ADC_GetValue(&AdcHandle1));
-
-	//Second one will have definatly completed by now however still make sure
-	while (HAL_ADC_PollForConversion(&AdcHandle2, 1) != HAL_OK);
-	data2[sampleNo%1000] = (uint16_t)(HAL_ADC_GetValue(&AdcHandle2));
-
-	//Increment sample number to store next sample
-	sampleNo++;
 }
+
 /**
   * @brief  Initialise Hardware Peripherals used.
   * @param  None
   * @retval None
   */
 void hardware_init() {
+	BRD_LEDInit();
+	BRD_LEDOff();
+
 	GPIO_InitTypeDef GPIO_InitStructure;
 
 	/* Enable A0 GPIO Clock */
 	__BRD_A0_GPIO_CLK();
 	__BRD_A1_GPIO_CLK();
+	__BRD_D2_GPIO_CLK();
 
 	/* Enable ADC1 clock */
 	__ADC1_CLK_ENABLE();
 	__ADC2_CLK_ENABLE();
+
+	__DMA1_CLK_ENABLE();
 
 	/* Configure A0, A1 as analog input */
 	GPIO_InitStructure.Pin = BRD_A0_PIN;			//Set A0 pin
@@ -137,21 +132,47 @@ void hardware_init() {
 	GPIO_InitStructure.Pin = BRD_A1_PIN;			//Set A0 pin
 	HAL_GPIO_Init(BRD_A1_GPIO_PORT, &GPIO_InitStructure);	//Initialise AO
 
+	//DMA Init
+	DMA_HandleTypeDef DMAHandle;
+
+	DMAHandle.Instance = DMA1_Stream0;
+	DMAHandle.Init.Channel = DMA_CHANNEL_0;
+	DMAHandle.Init.Direction = DMA_PERIPH_TO_MEMORY;
+	DMAHandle.Init.PeriphInc = DMA_PINC_DISABLE;
+	DMAHandle.Init.MemInc = DMA_MINC_ENABLE;
+	DMAHandle.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+	DMAHandle.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+	DMAHandle.Init.Mode = DMA_CIRCULAR;
+	DMAHandle.Init.Priority = DMA_PRIORITY_HIGH;
+	DMAHandle.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+	HAL_DMA_Init(&DMAHandle);
+
+	//NVIC_SetVector(DMA1_Stream0_IRQn, (uint32_t*)DMACompleteISR);
+	HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_0);
+	HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 3, 3);
+	HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
+
 	/* ADC For A0 - Microphone 1 */
 	AdcHandle1.Instance = (ADC_TypeDef *)(ADC1_BASE);						//Use ADC1
 	AdcHandle1.Init.ClockPrescaler        = ADC_CLOCKPRESCALER_PCLK_DIV2;	//Set clock prescaler
 	AdcHandle1.Init.Resolution            = ADC_RESOLUTION12b;				//Set 12-bit data resolution
 	AdcHandle1.Init.ScanConvMode          = DISABLE;
-	AdcHandle1.Init.ContinuousConvMode    = DISABLE;
+	AdcHandle1.Init.ContinuousConvMode    = ENABLE;
 	AdcHandle1.Init.DiscontinuousConvMode = DISABLE;
 	AdcHandle1.Init.NbrOfDiscConversion   = 0;
 	AdcHandle1.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_NONE;	//No Trigger
 	AdcHandle1.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T1_CC1;		//No Trigger
 	AdcHandle1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;				//Right align data
 	AdcHandle1.Init.NbrOfConversion       = 1;
-	AdcHandle1.Init.DMAContinuousRequests = DISABLE;
+	AdcHandle1.Init.DMAContinuousRequests = ENABLE;
 	AdcHandle1.Init.EOCSelection          = DISABLE;
-	HAL_ADC_Init(&AdcHandle1);		//Initialise ADC
+	AdcHandle1.DMA_Handle = &DMAHandle;
+
+	if(HAL_ADC_Init(&AdcHandle1) != HAL_OK){
+		//Init failed
+		debug_printf("ERROR");
+		for(;;);
+	}
 
 	/* Configure ADC Channel */
 	AdcChanConfig1.Channel = BRD_A0_ADC_CHAN;							//Use AO pin
@@ -160,27 +181,23 @@ void hardware_init() {
 	AdcChanConfig1.Offset       = 0;
 	HAL_ADC_ConfigChannel(&AdcHandle1, &AdcChanConfig1);		//Initialise ADC channel
 
-	/* ADC For A1 - Microphone 2 */
-	AdcHandle2.Instance = (ADC_TypeDef *)(ADC2_BASE);						//Use ADC1
-	AdcHandle2.Init.ClockPrescaler        = ADC_CLOCKPRESCALER_PCLK_DIV2;	//Set clock prescaler
-	AdcHandle2.Init.Resolution            = ADC_RESOLUTION12b;				//Set 12-bit data resolution
-	AdcHandle2.Init.ScanConvMode          = DISABLE;
-	AdcHandle2.Init.ContinuousConvMode    = DISABLE;
-	AdcHandle2.Init.DiscontinuousConvMode = DISABLE;
-	AdcHandle2.Init.NbrOfDiscConversion   = 0;
-	AdcHandle2.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_NONE;	//No Trigger
-	AdcHandle2.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T1_CC1;		//No Trigger
-	AdcHandle2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;				//Right align data
-	AdcHandle2.Init.NbrOfConversion       = 1;
-	AdcHandle2.Init.DMAContinuousRequests = DISABLE;
-	AdcHandle2.Init.EOCSelection          = DISABLE;
-	HAL_ADC_Init(&AdcHandle2);		//Initialise ADC
-
-	/* Configure ADC Channel */
-	AdcChanConfig1.Channel = BRD_A1_ADC_CHAN;							//Use AO pin
-	HAL_ADC_ConfigChannel(&AdcHandle2, &AdcChanConfig1);		//Initialise ADC channel
+	if(HAL_ADC_Start_DMA(&AdcHandle1, (uint32_t*)data1, 1000) != HAL_OK){
+		//Init failed
+		debug_printf("ERROR");
+		for(;;);
+	}
 }
 
+/**
+ * This isnt being called for some reason :'(
+ */
+void DMACompleteISR( void ){
+	HAL_DMA_IRQHandler(AdcHandle1.DMA_Handle);
+
+	BRD_LEDToggle();
+
+	//TODO Move sampled data into a new array for processing
+}
 
 /**
   * @brief  Delay Function.
@@ -191,4 +208,34 @@ void Delay(__IO unsigned long nCount) {
 	while(nCount--) {
 	}
 }
+
+
+/**
+ * This is the old code for the other ADC
+ */
+//	/* ADC For A1 - Microphone 2 */
+//	AdcHandle2.Instance = (ADC_TypeDef *)(ADC2_BASE);						//Use ADC1
+//	AdcHandle2.Init.ClockPrescaler        = ADC_CLOCKPRESCALER_PCLK_DIV2;	//Set clock prescaler
+//	AdcHandle2.Init.Resolution            = ADC_RESOLUTION12b;				//Set 12-bit data resolution
+//	AdcHandle2.Init.ScanConvMode          = DISABLE;
+//	AdcHandle2.Init.ContinuousConvMode    = DISABLE;
+//	AdcHandle2.Init.DiscontinuousConvMode = DISABLE;
+//	AdcHandle2.Init.NbrOfDiscConversion   = 0;
+//	AdcHandle2.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_NONE;	//No Trigger
+//	AdcHandle2.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T1_CC1;		//No Trigger
+//	AdcHandle2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;				//Right align data
+//	AdcHandle2.Init.NbrOfConversion       = 1;
+//	AdcHandle2.Init.DMAContinuousRequests = DISABLE;
+//	AdcHandle2.Init.EOCSelection          = DISABLE;
+//	HAL_ADC_Init(&AdcHandle2);		//Initialise ADC
+//
+//	/* Configure ADC Channel */
+//	AdcChanConfig1.Channel = BRD_A1_ADC_CHAN;							//Use AO pin
+//	HAL_ADC_ConfigChannel(&AdcHandle2, &AdcChanConfig1);		//Initialise ADC channel
+//
+//	GPIO_InitStructure.Pin = BRD_D2_PIN;				//Pin
+//	GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;		//Output Mode
+//	GPIO_InitStructure.Pull = GPIO_PULLDOWN;			//Enable Pull up, down or no pull resister
+//	GPIO_InitStructure.Speed = GPIO_SPEED_HIGH;			//Pin latency
+//	HAL_GPIO_Init(BRD_D2_GPIO_PORT, &GPIO_InitStructure);	//Initialise Pin
 
