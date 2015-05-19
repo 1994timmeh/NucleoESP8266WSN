@@ -121,7 +121,7 @@ void 	ESP8622_init( void ){
 	  debug_printf("UART Interrupt init FAIL");
   }
 
-  xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", mainLED_TASK_STACK_SIZE * 5, NULL, mainLED_PRIORITY + 1, NULL );
+  xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", TESTING_STACK_SIZE * 5, NULL, TESTING_PRIORITY + 1, NULL );
 
   Data_Queue = xQueueCreate(20, sizeof(char[100]));
   Access_Points = pvPortMalloc(sizeof(APs));

@@ -44,8 +44,8 @@ typedef struct{
 
 #define WIFI_CMD_SEND_DATA "AT+CIPSEND=%d,%d\r\n"
 
-#define mainLED_PRIORITY					( tskIDLE_PRIORITY + 2 )
-#define mainLED_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
+#define TESTING_PRIORITY					( tskIDLE_PRIORITY + 2 )
+#define TESTING_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
 
 #define SEC 0x7FFF00
 #define task_loop for(;;)
