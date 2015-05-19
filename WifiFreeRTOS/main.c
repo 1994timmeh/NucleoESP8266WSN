@@ -92,16 +92,8 @@ int main( void ) {
 void Testing_Task( void ) {
 	char SSID[50];
 	char buffer[10];
-<<<<<<< HEAD
 
-	Ultrasonic_init();
-=======
-
-	//Ultrasonic_init();
-	debug_printf("Begin testing\n\n");
->>>>>>> f496803a87c8ad967d3d1b632b207624883a58cc
-
-	debug_printf("Begin testing\n\n");
+	char task_list_buffer[1000];
 
 	Wifi_reset();
 
@@ -125,56 +117,19 @@ void Testing_Task( void ) {
 
 	for (;;) {
 		/* Toggle LED */
-		Wifi_listAPs();
-		Access_Point* ap = (Access_Point*)get_AP("NUCLEOWSN1");
-		if (ap != NULL) {
-		   //debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
-		}
 
-		Ultrasonic_start();
 
-		int len = sprintf(&buffer, "DA:[134%d]", ap->RSSI);
-		Wifi_senddata(0, buffer, len);
-
-//		Wifi_listAPs();
+//		Dont need to list APs and this takes like 5 seconds to scan
+// 		Wifi_listAPs();
 //		Access_Point* ap = (Access_Point*)get_AP("NUCLEOWSN1");
 //		if (ap != NULL) {
 //		   //debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
 //		}
-//
-//		Ultrasonic_start();
-		// vTaskDelay(1000);
-		//
-		// // int len = sprintf(&buffer, "DA:[125%d]", Ultrasonic_getdist());
-		// // Wifi_senddata(0, buffer, len);
-		//
-		// vTaskDelay(1000);
-		//
-//		int len = sprintf(&buffer, "DA:[124%d]", ap->RSSI);
-//		Wifi_senddata(0, buffer, len);
-//
-//		debug_printf("RSSI: %d\n", ap->RSSI);
-//		debug_printf("Distance: %d\n", Ultrasonic_getdist());
-//		debug_printf("Width: %d\n",Ultrasonic_getwidth());
 
+		BRD_LEDToggle();
 		vTaskDelay(1000);
-
-		len = sprintf(&buffer, "DA:[125%d]", Ultrasonic_getdist());
-		Wifi_senddata(0, buffer, len);
-
-
-
-		// debug_printf("RSSI: %d\n", ap->RSSI);
-		// debug_printf("Distance: %d\n", Ultrasonic_getdist());
-		// debug_printf("Width: %d\n",Ultrasonic_getwidth());
 	}
 }
-
-
-void USART_Tx_Task( void ) {
-
-}
-
 
 void Software_timer(){
 	uint16_t ledsync  = 0;

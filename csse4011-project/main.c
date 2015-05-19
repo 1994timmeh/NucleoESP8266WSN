@@ -17,6 +17,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
+#define BUFFER_SIZE 256
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef AdcHandle1;
@@ -24,16 +25,17 @@ ADC_HandleTypeDef AdcHandle2;
 ADC_ChannelConfTypeDef AdcChanConfig1;
 ADC_ChannelConfTypeDef AdcChanConfig2;
 TIM_HandleTypeDef TIM_Init;
-DMA_HandleTypeDef DMAHandle;
+DMA_HandleTypeDef DMAHandle1;
+DMA_HandleTypeDef DMAHandle2;
 
 int sampleNo = 0;
-
-//Temp storage for data as we fill the buffer
-uint16_t data1[256];
-uint32_t data2[256];
+// Audio sample buffers
+uint16_t data1[BUFFER_SIZE];
+uint16_t data2[BUFFER_SIZE];
+uint16_t ready_data1[BUFFER_SIZE];
+uint16_t ready_data2[BUFFER_SIZE];
 
 uint8_t freq_out = 0, freq_out2 = 0;
-
 uint16_t value = 0;
 
 /* Private function prototypes -----------------------------------------------*/
@@ -44,9 +46,8 @@ void adc_switch_channel_1( void );
 void tim2_irqhandler( void );
 void tim3_dma( void );
 void timer_interupt_init( void );
-void DMACompleteISR( void );
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* AdcHandle);
-
+void DMACompleteISR1( void );
+void DMACompleteISR2( void );
 void Error_Handler( void );
 
 
@@ -103,8 +104,6 @@ void timer_interupt_init(){
 
 void tim2_irqhandler( void ){
 	__HAL_TIM_CLEAR_IT(&TIM_Init, TIM_IT_UPDATE);
-	HAL_GPIO_WritePin(BRD_D1_GPIO_PORT, BRD_D1_PIN, 1);
-	HAL_GPIO_WritePin(BRD_D1_GPIO_PORT, BRD_D1_PIN, 0);
 }
 
 /**
@@ -129,6 +128,7 @@ void hardware_init() {
 	__ADC2_CLK_ENABLE();
 
 	__DMA2_CLK_ENABLE();
+	__DMA1_CLK_ENABLE();
 
 	/* Configure A0, A1 as analog input */
 	GPIO_InitStructure.Pin 		= BRD_A0_PIN;			//Set A0 pin
@@ -149,26 +149,21 @@ void hardware_init() {
 	GPIO_InitStructure.Pull 	= GPIO_PULLDOWN ;			//No Pull up resister
 	HAL_GPIO_Init(BRD_D1_GPIO_PORT, &GPIO_InitStructure);	//Initialise AO
 
-	GPIO_InitStructure.Pin 		= BRD_A5_PIN;			//Set A0 pin
-	GPIO_InitStructure.Mode 	= GPIO_MODE_ANALOG;		//Set to Analog input
-	GPIO_InitStructure.Pull 	= GPIO_NOPULL ;			//No Pull up resister
-	HAL_GPIO_Init(BRD_A5_GPIO_PORT, &GPIO_InitStructure);	//Initialise AO
-
-	DMAHandle.Instance 					= DMA2_Stream0;
-	DMAHandle.Init.Channel				= DMA_CHANNEL_0;
-	DMAHandle.Init.Direction 			= DMA_PERIPH_TO_MEMORY;
-	DMAHandle.Init.PeriphInc 			= DMA_PINC_DISABLE;
-	DMAHandle.Init.MemInc 				= DMA_MINC_ENABLE;
-	DMAHandle.Init.PeriphDataAlignment 	= DMA_PDATAALIGN_HALFWORD;
-	DMAHandle.Init.MemDataAlignment 	= DMA_MDATAALIGN_HALFWORD;
-	DMAHandle.Init.Mode 				= DMA_CIRCULAR; //DMA_NORMAL
-	DMAHandle.Init.Priority 			= DMA_PRIORITY_LOW;
-	DMAHandle.Init.FIFOMode 			= DMA_FIFOMODE_ENABLE;
-	HAL_DMA_Init(&DMAHandle);
+	DMAHandle1.Instance 					= DMA2_Stream0;
+	DMAHandle1.Init.Channel				= DMA_CHANNEL_0;
+	DMAHandle1.Init.Direction 			= DMA_PERIPH_TO_MEMORY;
+	DMAHandle1.Init.PeriphInc 			= DMA_PINC_DISABLE;
+	DMAHandle1.Init.MemInc 				= DMA_MINC_ENABLE;
+	DMAHandle1.Init.PeriphDataAlignment 	= DMA_PDATAALIGN_HALFWORD;
+	DMAHandle1.Init.MemDataAlignment 	= DMA_MDATAALIGN_HALFWORD;
+	DMAHandle1.Init.Mode 				= DMA_CIRCULAR; //DMA_NORMAL
+	DMAHandle1.Init.Priority 			= DMA_PRIORITY_LOW;
+	DMAHandle1.Init.FIFOMode 			= DMA_FIFOMODE_ENABLE;
+	HAL_DMA_Init(&DMAHandle1);
 
 	/* ADC For A0 - Microphone 1 */
 	AdcHandle1.Instance = (ADC_TypeDef *)ADC1_BASE;
-	AdcHandle1.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
+	AdcHandle1.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV8;
 	AdcHandle1.Init.Resolution = ADC_RESOLUTION_12B;
 	AdcHandle1.Init.ScanConvMode = ENABLE;
 	AdcHandle1.Init.ContinuousConvMode = DISABLE;
@@ -181,15 +176,15 @@ void hardware_init() {
 	AdcHandle1.Init.DMAContinuousRequests = ENABLE;
 	AdcHandle1.Init.EOCSelection = DISABLE;
 
-	AdcHandle1.DMA_Handle 		= &DMAHandle;
-	DMAHandle.Parent 			= &AdcHandle1;
+	AdcHandle1.DMA_Handle 		= &DMAHandle1;
+	DMAHandle1.Parent 			= &AdcHandle1;
 
 	HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 10, 1);
-	NVIC_SetVector(DMA2_Stream0_IRQn, (uint16_t)&DMACompleteISR);
+	NVIC_SetVector(DMA2_Stream0_IRQn, (uint16_t)&DMACompleteISR1);
 	HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
 
-	__HAL_LINKDMA(&AdcHandle1, DMA_Handle, DMAHandle);
+	__HAL_LINKDMA(&AdcHandle1, DMA_Handle, DMAHandle1);
 
 	if(HAL_ADC_Init(&AdcHandle1) != HAL_OK){
 		//Init failed
@@ -212,19 +207,87 @@ void hardware_init() {
 		for(;;);
 	}
 
-	if(HAL_ADC_Start_DMA(&AdcHandle1, (uint32_t*)data1, 1) != HAL_OK){
+	if(HAL_ADC_Start_DMA(&AdcHandle1, (uint32_t*)data1, BUFFER_SIZE) != HAL_OK){
 		//Init failed
 		BRD_LEDOn();
 		debug_printf("ERROR");
 		for(;;);
 	}
+
+	// WE NEED TO DO THE SAME THING FOR THE SECOND ADC :'( DMA1 A1
+
+	DMAHandle2.Instance 				= DMA2_Stream2;
+	DMAHandle2.Init.Channel				= DMA_CHANNEL_1;
+	DMAHandle2.Init.Direction 			= DMA_PERIPH_TO_MEMORY;
+	DMAHandle2.Init.PeriphInc 			= DMA_PINC_DISABLE;
+	DMAHandle2.Init.MemInc 				= DMA_MINC_ENABLE;
+	DMAHandle2.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+	DMAHandle2.Init.MemDataAlignment 	= DMA_MDATAALIGN_HALFWORD;
+	DMAHandle2.Init.Mode 				= DMA_CIRCULAR; //DMA_NORMAL
+	DMAHandle2.Init.Priority 			= DMA_PRIORITY_LOW;
+	DMAHandle2.Init.FIFOMode 			= DMA_FIFOMODE_ENABLE;
+	HAL_DMA_Init(&DMAHandle2);
+
+	/* ADC For A0 - Microphone 1 */
+	AdcHandle2.Instance = (ADC_TypeDef *)ADC2_BASE;
+	AdcHandle2.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV8;
+	AdcHandle2.Init.Resolution = ADC_RESOLUTION_12B;
+	AdcHandle2.Init.ScanConvMode = ENABLE;
+	AdcHandle2.Init.ContinuousConvMode = DISABLE;
+	AdcHandle2.Init.DiscontinuousConvMode = DISABLE;
+	AdcHandle2.Init.NbrOfDiscConversion = 1;
+	AdcHandle2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISINGFALLING;
+	AdcHandle2.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T3_TRGO;
+	AdcHandle2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+	AdcHandle2.Init.NbrOfConversion = 1;
+	AdcHandle2.Init.DMAContinuousRequests = ENABLE;
+	AdcHandle2.Init.EOCSelection = DISABLE;
+
+	AdcHandle2.DMA_Handle 		= &DMAHandle2;
+	DMAHandle2.Parent 			= &AdcHandle2;
+
+	HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 10, 1);
+	NVIC_SetVector(DMA2_Stream2_IRQn, (uint16_t)&DMACompleteISR2);
+	HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
+
+
+	__HAL_LINKDMA(&AdcHandle2, DMA_Handle, DMAHandle2);
+
+	if(HAL_ADC_Init(&AdcHandle2) != HAL_OK){
+		//Init failed
+		debug_printf("ERROR");
+		BRD_LEDOn();
+		for(;;);
+	}
+
+	HAL_ADC_Start_IT(&AdcHandle2);
+
+	/* Configure ADC Channel */
+	AdcChanConfig1.Channel 		= BRD_A1_ADC_CHAN;	//Use AO pin
+	AdcChanConfig1.Rank         = 1;
+	AdcChanConfig1.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+	AdcChanConfig1.Offset       = 0;
+
+	if( HAL_ADC_ConfigChannel(&AdcHandle2, &AdcChanConfig2) != HAL_OK){
+		debug_printf("ERROR");
+		BRD_LEDOn();
+		for(;;);
+	}
+
+	if(HAL_ADC_Start_DMA(&AdcHandle2, (uint32_t*)data2, BUFFER_SIZE) != HAL_OK){
+		//Init failed
+		BRD_LEDOn();
+		debug_printf("ERROR");
+		for(;;);
+	}
+
 }
 
 void HAL_ADC_ErrorCallback (ADC_HandleTypeDef * hadc){
 	debug_printf("ADC ERROR\n");
 }
 
-void DMACompleteISR( void ){
+void DMACompleteISR1( void ){
 	//Data transfer is complete! Handle the interupt.
 	HAL_DMA_IRQHandler(AdcHandle1.DMA_Handle);
 
@@ -232,6 +295,26 @@ void DMACompleteISR( void ){
 	HAL_GPIO_WritePin(BRD_D0_GPIO_PORT, BRD_D0_PIN, 1);
 	Delay(1);
 	HAL_GPIO_WritePin(BRD_D0_GPIO_PORT, BRD_D0_PIN, 0);
+
+	int i;
+	for(i = 0; i < BUFFER_SIZE; i++){
+		ready_data1[i] = data1[i];
+	}
+}
+
+void DMACompleteISR2( void ){
+	//Data transfer is complete! Handle the interupt.
+	HAL_DMA_IRQHandler(AdcHandle2.DMA_Handle);
+
+	// Output pulse to get sampling rate with LA
+	HAL_GPIO_WritePin(BRD_D1_GPIO_PORT, BRD_D1_PIN, 1);
+	Delay(1);
+	HAL_GPIO_WritePin(BRD_D1_GPIO_PORT, BRD_D1_PIN, 0);
+
+	int i;
+	for(i = 0; i < BUFFER_SIZE; i++){
+		ready_data2[BUFFER_SIZE - i] = data2[i];
+	}
 }
 
 /**
