@@ -58,12 +58,11 @@ void Error_Handler( void );
 int main(void) {
 	unsigned int adc_value;
 
-	BRD_init();	//Initialise the NP2 board.
-	hardware_init();	//Initialise Hardware peripheral
+	BRD_init();    //Initialise the NP2 board.
+	hardware_init();    //Initialise Hardware peripheral
 	timer_interupt_init();
 
-	while (1){
-	}
+	while (1);
 }
 
 
@@ -75,10 +74,10 @@ void timer_interupt_init(){
 	__TIM3_CLK_ENABLE();
 
 	/* Compute the prescaler value */
-	PrescalerValue = (uint16_t) ((SystemCoreClock/4)/515000) - 1;		//Set clock prescaler to 50kHz - SystemCoreClock is the system clock frequency.
+	PrescalerValue = (uint16_t) ((SystemCoreClock/2)/500000);		//Set clock prescaler to 500kHz - SystemCoreClock is the system clock frequency.
 
 	TIM_Init.Instance = TIM3;				//Enable Timer 2
-	TIM_Init.Init.Period = 10;			//Set period count to be 1ms, so timer interrupt occurs every 1ms.
+	TIM_Init.Init.Period = 4;			//Set period count to be 1ms, so timer interrupt occurs every 1ms.
 	TIM_Init.Init.Prescaler = PrescalerValue;	//Set presale value
 	TIM_Init.Init.ClockDivision = 0;			//Set clock division
 	TIM_Init.Init.RepetitionCounter = 0;	// Set Reload Value
@@ -105,7 +104,6 @@ void timer_interupt_init(){
 void tim2_irqhandler( void ){
 	__HAL_TIM_CLEAR_IT(&TIM_Init, TIM_IT_UPDATE);
 	HAL_GPIO_WritePin(BRD_D1_GPIO_PORT, BRD_D1_PIN, 1);
-	Delay(1);
 	HAL_GPIO_WritePin(BRD_D1_GPIO_PORT, BRD_D1_PIN, 0);
 }
 
@@ -170,9 +168,9 @@ void hardware_init() {
 
 	/* ADC For A0 - Microphone 1 */
 	AdcHandle1.Instance = (ADC_TypeDef *)ADC1_BASE;
-	AdcHandle1.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV8;
+	AdcHandle1.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
 	AdcHandle1.Init.Resolution = ADC_RESOLUTION_12B;
-	AdcHandle1.Init.ScanConvMode = DISABLE;
+	AdcHandle1.Init.ScanConvMode = ENABLE;
 	AdcHandle1.Init.ContinuousConvMode = DISABLE;
 	AdcHandle1.Init.DiscontinuousConvMode = DISABLE;
 	AdcHandle1.Init.NbrOfDiscConversion = 1;
@@ -187,8 +185,9 @@ void hardware_init() {
 	DMAHandle.Parent 			= &AdcHandle1;
 
 	HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 10, 1);
-	HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 	NVIC_SetVector(DMA2_Stream0_IRQn, (uint16_t)&DMACompleteISR);
+	HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+
 
 	__HAL_LINKDMA(&AdcHandle1, DMA_Handle, DMAHandle);
 
@@ -219,11 +218,6 @@ void hardware_init() {
 		debug_printf("ERROR");
 		for(;;);
 	}
-
-}
-
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* AdcHandle) {
-	//debug_printf("ADC: %d\n", data1[0]);
 }
 
 void HAL_ADC_ErrorCallback (ADC_HandleTypeDef * hadc){
@@ -231,8 +225,10 @@ void HAL_ADC_ErrorCallback (ADC_HandleTypeDef * hadc){
 }
 
 void DMACompleteISR( void ){
-	//Data transfer is complete!
+	//Data transfer is complete! Handle the interupt.
 	HAL_DMA_IRQHandler(AdcHandle1.DMA_Handle);
+
+	// Output pulse to get sampling rate with LA
 	HAL_GPIO_WritePin(BRD_D0_GPIO_PORT, BRD_D0_PIN, 1);
 	Delay(1);
 	HAL_GPIO_WritePin(BRD_D0_GPIO_PORT, BRD_D0_PIN, 0);
