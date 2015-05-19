@@ -18,6 +18,7 @@
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 #define BUFFER_SIZE 256
+
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef AdcHandle1;
@@ -34,9 +35,6 @@ uint16_t data1[BUFFER_SIZE];
 uint16_t data2[BUFFER_SIZE];
 uint16_t ready_data1[BUFFER_SIZE];
 uint16_t ready_data2[BUFFER_SIZE];
-
-uint8_t freq_out = 0, freq_out2 = 0;
-uint16_t value = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 void Delay(__IO unsigned long nCount);
@@ -63,7 +61,13 @@ int main(void) {
 	hardware_init();    //Initialise Hardware peripheral
 	timer_interupt_init();
 
-	while (1);
+	while (1){
+		int i = 0;
+		for(i = 0; i < BUFFER_SIZE; i++){
+			debug_printf("%03X %03X\n", ready_data1[i], ready_data2[i]);
+		}
+		Delay(0x7FFF00);
+	}
 }
 
 
@@ -127,8 +131,8 @@ void hardware_init() {
 	__ADC1_CLK_ENABLE();
 	__ADC2_CLK_ENABLE();
 
-	__DMA2_CLK_ENABLE();
 	__DMA1_CLK_ENABLE();
+	__DMA2_CLK_ENABLE();
 
 	/* Configure A0, A1 as analog input */
 	GPIO_InitStructure.Pin 		= BRD_A0_PIN;			//Set A0 pin
@@ -228,7 +232,7 @@ void hardware_init() {
 	DMAHandle2.Init.FIFOMode 			= DMA_FIFOMODE_ENABLE;
 	HAL_DMA_Init(&DMAHandle2);
 
-	/* ADC For A0 - Microphone 1 */
+	/* ADC For A1 - Microphone 2 */
 	AdcHandle2.Instance = (ADC_TypeDef *)ADC2_BASE;
 	AdcHandle2.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV8;
 	AdcHandle2.Init.Resolution = ADC_RESOLUTION_12B;
@@ -263,10 +267,10 @@ void hardware_init() {
 	HAL_ADC_Start_IT(&AdcHandle2);
 
 	/* Configure ADC Channel */
-	AdcChanConfig1.Channel 		= BRD_A1_ADC_CHAN;	//Use AO pin
-	AdcChanConfig1.Rank         = 1;
-	AdcChanConfig1.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-	AdcChanConfig1.Offset       = 0;
+	AdcChanConfig2.Channel 		= BRD_A1_ADC_CHAN;	//Use AO pin
+	AdcChanConfig2.Rank         = 1;
+	AdcChanConfig2.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+	AdcChanConfig2.Offset       = 0;
 
 	if( HAL_ADC_ConfigChannel(&AdcHandle2, &AdcChanConfig2) != HAL_OK){
 		debug_printf("ERROR");
@@ -313,7 +317,7 @@ void DMACompleteISR2( void ){
 
 	int i;
 	for(i = 0; i < BUFFER_SIZE; i++){
-		ready_data2[BUFFER_SIZE - i] = data2[i];
+		ready_data2[i] = data2[i];
 	}
 }
 
@@ -327,38 +331,8 @@ void Delay(__IO unsigned long nCount) {
 	}
 }
 
-
-/**
- * This is the old code for the other ADC
- */
-//	/* ADC For A1 - Microphone 2 */
-//	AdcHandle2.Instance = (ADC_TypeDef *)(ADC2_BASE);						//Use ADC1
-//	AdcHandle2.Init.ClockPrescaler        = ADC_CLOCKPRESCALER_PCLK_DIV2;	//Set clock prescaler
-//	AdcHandle2.Init.Resolution            = ADC_RESOLUTION12b;				//Set 12-bit data resolution
-//	AdcHandle2.Init.ScanConvMode          = DISABLE;
-//	AdcHandle2.Init.ContinuousConvMode    = DISABLE;
-//	AdcHandle2.Init.DiscontinuousConvMode = DISABLE;
-//	AdcHandle2.Init.NbrOfDiscConversion   = 0;
-//	AdcHandle2.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_NONE;	//No Trigger
-//	AdcHandle2.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T1_CC1;		//No Trigger
-//	AdcHandle2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;				//Right align data
-//	AdcHandle2.Init.NbrOfConversion       = 1;
-//	AdcHandle2.Init.DMAContinuousRequests = DISABLE;
-//	AdcHandle2.Init.EOCSelection          = DISABLE;
-//	HAL_ADC_Init(&AdcHandle2);		//Initialise ADC
-//
-//	/* Configure ADC Channel */
-//	AdcChanConfig1.Channel = BRD_A1_ADC_CHAN;							//Use AO pin
-//	HAL_ADC_ConfigChannel(&AdcHandle2, &AdcChanConfig1);		//Initialise ADC channel
-//
-//	GPIO_InitStructure.Pin = BRD_D2_PIN;				//Pin
-//	GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;		//Output Mode
-//	GPIO_InitStructure.Pull = GPIO_PULLDOWN;			//Enable Pull up, down or no pull resister
-//	GPIO_InitStructure.Speed = GPIO_SPEED_HIGH;			//Pin latency
-//	HAL_GPIO_Init(BRD_D2_GPIO_PORT, &GPIO_InitStructure);	//Initialise Pin
-
-
 void Error_Handler(){
 	debug_printf("ERROR");
 	BRD_LEDOff();
+	for(;;);
 }
