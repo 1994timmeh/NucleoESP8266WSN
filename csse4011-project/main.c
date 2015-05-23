@@ -1,18 +1,19 @@
 /**
   ******************************************************************************
-  * @file    ex4_adc.c 
+  * @file    ex4_adc.c
   * @author  MDS
   * @date    10-January-2014
   * @brief   Enable the ADC1 on pin A0.
   *			 See Section 13 (ADC), P385 of the STM32F4xx Reference Manual.
   ******************************************************************************
-  *  
+  *
   */
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal_conf.h"
 #include "debug_printf.h"
 #include "board.h"
+#include "audioProcessing.h"
 
 
 /* Private typedef -----------------------------------------------------------*/
@@ -29,12 +30,15 @@ TIM_HandleTypeDef TIM_Init;
 DMA_HandleTypeDef DMAHandle1;
 DMA_HandleTypeDef DMAHandle2;
 
-int sampleNo = 0;
+volatile int sampleNo1 = 0, sampleNo2 = 0;
 // Audio sample buffers
-uint16_t data1[BUFFER_SIZE];
-uint16_t data2[BUFFER_SIZE];
-uint16_t ready_data1[BUFFER_SIZE];
-uint16_t ready_data2[BUFFER_SIZE];
+float data1[BUFFER_SIZE];
+float data2[BUFFER_SIZE];
+float32_t ready_data1[BUFFER_SIZE];
+float32_t ready_data2[BUFFER_SIZE];
+
+uint32_t buffer1;
+uint32_t buffer2;
 
 /* Private function prototypes -----------------------------------------------*/
 void Delay(__IO unsigned long nCount);
@@ -48,6 +52,8 @@ void DMACompleteISR1( void );
 void DMACompleteISR2( void );
 void Error_Handler( void );
 
+struct frameResults results;
+
 
 /**
   * @brief  Main program - enable ADC input on A0
@@ -60,13 +66,21 @@ int main(void) {
 	BRD_init();    //Initialise the NP2 board.
 	hardware_init();    //Initialise Hardware peripheral
 	timer_interupt_init();
+	audioProcessingInit();
 
 	while (1){
 		int i = 0;
-		for(i = 0; i < BUFFER_SIZE; i++){
-			debug_printf("%03X %03X\n", ready_data1[i], ready_data2[i]);
+		audioProcessFrame(ready_data1, ready_data2, &results);
+		if(results.validFrame){
+			debug_printf("FOUND: %d\n", results.maxBin);
 		}
-		Delay(0x7FFF00);
+
+		for(i = 0; i < BUFFER_SIZE; i++){
+			debug_printf("%d %d\n", (int)ready_data1[i], (int)ready_data2[i]);
+		}
+
+		BRD_LEDToggle();
+		Delay(0x7FFF00/4);
 	}
 }
 
@@ -184,7 +198,7 @@ void hardware_init() {
 	DMAHandle1.Parent 			= &AdcHandle1;
 
 	HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 10, 1);
-	NVIC_SetVector(DMA2_Stream0_IRQn, (uint16_t)&DMACompleteISR1);
+	NVIC_SetVector(DMA2_Stream0_IRQn, (uint32_t)&DMACompleteISR1);
 	HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
 
@@ -211,7 +225,7 @@ void hardware_init() {
 		for(;;);
 	}
 
-	if(HAL_ADC_Start_DMA(&AdcHandle1, (uint32_t*)data1, BUFFER_SIZE) != HAL_OK){
+	if(HAL_ADC_Start_DMA(&AdcHandle1, (uint32_t*)(&buffer1), 1) != HAL_OK){
 		//Init failed
 		BRD_LEDOn();
 		debug_printf("ERROR");
@@ -251,7 +265,7 @@ void hardware_init() {
 	DMAHandle2.Parent 			= &AdcHandle2;
 
 	HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 10, 1);
-	NVIC_SetVector(DMA2_Stream2_IRQn, (uint16_t)&DMACompleteISR2);
+	NVIC_SetVector(DMA2_Stream2_IRQn, (uint32_t)&DMACompleteISR2);
 	HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
 
 
@@ -278,7 +292,7 @@ void hardware_init() {
 		for(;;);
 	}
 
-	if(HAL_ADC_Start_DMA(&AdcHandle2, (uint32_t*)data2, BUFFER_SIZE) != HAL_OK){
+	if(HAL_ADC_Start_DMA(&AdcHandle2, (uint32_t*)(&buffer2), 1) != HAL_OK){
 		//Init failed
 		BRD_LEDOn();
 		debug_printf("ERROR");
@@ -300,10 +314,15 @@ void DMACompleteISR1( void ){
 	Delay(1);
 	HAL_GPIO_WritePin(BRD_D0_GPIO_PORT, BRD_D0_PIN, 0);
 
-	int i;
-	for(i = 0; i < BUFFER_SIZE; i++){
-		ready_data1[i] = data1[i];
+	data1[sampleNo1 % 256] = (float32_t)buffer1;
+	if(sampleNo1 == 256){
+		int i = 0;
+		for(i = 0; i < 256; i++){
+			ready_data1[i] = data1[i];
+		}
+		sampleNo1 = 0;
 	}
+	sampleNo1++;
 }
 
 void DMACompleteISR2( void ){
@@ -315,10 +334,19 @@ void DMACompleteISR2( void ){
 	Delay(1);
 	HAL_GPIO_WritePin(BRD_D1_GPIO_PORT, BRD_D1_PIN, 0);
 
-	int i;
-	for(i = 0; i < BUFFER_SIZE; i++){
-		ready_data2[i] = data2[i];
+	// int i;
+	// for(i = 0; i < BUFFER_SIZE; i++){
+	// 	ready_data2[i] = data2[i];
+	// }
+	data2[sampleNo2 % 256] = (float32_t)buffer2;
+	if(sampleNo2 == 256){
+		int i = 0;
+		for(i = 0; i < 256; i++){
+			ready_data2[i] = data2[i];
+		}
+		sampleNo2 = 0;
 	}
+	sampleNo2++;
 }
 
 /**

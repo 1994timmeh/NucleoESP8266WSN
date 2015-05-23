@@ -9,7 +9,7 @@ COMMON_PATH=$(NP2_ROOT)/src/Libraries/common
 CMSIS_PATH=$(NP2_ROOT)/src/Libraries/cmsis
 FREERTOS_PATH=$(NP2_ROOT)/src/FreeRTOS
 
-DSP_CMSIS_PATH=/home/csse3010/STM32Cube_FW_F4_V1.5.0/Drivers/CMSIS
+DSP_CMSIS_PATH=/Users/tim/STM32Cube_FW_F4_V1.5.0/Drivers/CMSIS
 DSP_PATH=$(DSP_CMSIS_PATH)/DSP_Lib/Source
 
 PROJ_NAME=main
