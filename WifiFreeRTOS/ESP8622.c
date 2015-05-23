@@ -54,52 +54,55 @@ extern void Testing_Task( void );
 void 	ESP8622_init( void ){
   GPIO_InitTypeDef GPIO_serial;
 
-  __USART1_CLK_ENABLE();
+  __USART6_CLK_ENABLE();
   __BRD_D10_GPIO_CLK();
   __BRD_D2_GPIO_CLK();
   __BRD_D3_GPIO_CLK();
   __BRD_D4_GPIO_CLK();
   __BRD_D5_GPIO_CLK();
   __BRD_D6_GPIO_CLK();
+  __BRD_D1_GPIO_CLK();
+  __BRD_D0_GPIO_CLK();
 
-  GPIO_serial.Pin = BRD_D3_PIN;
-  GPIO_serial.Mode = GPIO_MODE_OUTPUT_PP;				             	//Enable alternate mode setting
-  GPIO_serial.Pull = GPIO_PULLDOWN;
-  GPIO_serial.Speed = GPIO_SPEED_HIGH;
-  HAL_GPIO_Init(BRD_D3_GPIO_PORT, &GPIO_serial);
+//  GPIO_serial.Pin = BRD_D3_PIN;
+//  GPIO_serial.Mode = GPIO_MODE_OUTPUT_PP;				             	//Enable alternate mode setting
+//  GPIO_serial.Pull = GPIO_PULLDOWN;
+//  GPIO_serial.Speed = GPIO_SPEED_HIGH;
+//  HAL_GPIO_Init(BRD_D3_GPIO_PORT, &GPIO_serial);
+//
+//  GPIO_serial.Pin = BRD_D4_PIN;
+//  HAL_GPIO_Init(BRD_D4_GPIO_PORT, &GPIO_serial);
+//
+//  GPIO_serial.Pin = BRD_D5_PIN;
+//  HAL_GPIO_Init(BRD_D5_GPIO_PORT, &GPIO_serial);
+//
+//  GPIO_serial.Pin = BRD_D6_PIN;
+//  HAL_GPIO_Init(BRD_D6_GPIO_PORT, &GPIO_serial);
+//
+//  GPIO_serial.Pin = BRD_D7_PIN;
+//  HAL_GPIO_Init(BRD_D7_GPIO_PORT, &GPIO_serial);
+//
+//  GPIO_serial.Pin = BRD_D8_PIN;
+//  HAL_GPIO_Init(BRD_D8_GPIO_PORT, &GPIO_serial);
 
-  GPIO_serial.Pin = BRD_D4_PIN;
-  HAL_GPIO_Init(BRD_D4_GPIO_PORT, &GPIO_serial);
 
-  GPIO_serial.Pin = BRD_D5_PIN;
-  HAL_GPIO_Init(BRD_D5_GPIO_PORT, &GPIO_serial);
+	/* Configure the D0 as the RX pin for USART6 */
+	GPIO_serial.Pin = BRD_D0_PIN;
+	GPIO_serial.Mode = GPIO_MODE_AF_PP;					//Enable alternate mode setting
+	GPIO_serial.Pull = GPIO_PULLDOWN;
+	GPIO_serial.Speed = GPIO_SPEED_HIGH;
+	GPIO_serial.Alternate = GPIO_AF8_USART6;			//Set alternate setting to USART 6
+	HAL_GPIO_Init(BRD_D0_GPIO_PORT, &GPIO_serial);
 
-  GPIO_serial.Pin = BRD_D6_PIN;
-  HAL_GPIO_Init(BRD_D6_GPIO_PORT, &GPIO_serial);
+	/* Configure the D1 as the tX pin for USART6 */
+	GPIO_serial.Pin = BRD_D1_PIN;
+	GPIO_serial.Mode = GPIO_MODE_AF_PP;					//Enable alternate mode setting
+	GPIO_serial.Pull = GPIO_PULLUP;
+	GPIO_serial.Speed = GPIO_SPEED_HIGH;
+	GPIO_serial.Alternate = GPIO_AF8_USART6;			//Set alternate setting to USART 6
+	HAL_GPIO_Init(BRD_D1_GPIO_PORT, &GPIO_serial);
 
-  GPIO_serial.Pin = BRD_D7_PIN;
-  HAL_GPIO_Init(BRD_D7_GPIO_PORT, &GPIO_serial);
-
-  GPIO_serial.Pin = BRD_D8_PIN;
-  HAL_GPIO_Init(BRD_D8_GPIO_PORT, &GPIO_serial);
-
-  /* Configure the D2 as the RX pin for USART1 */
-  GPIO_serial.Pin = BRD_D2_PIN;
-  GPIO_serial.Mode = GPIO_MODE_AF_PP;				             	//Enable alternate mode setting
-  GPIO_serial.Pull = GPIO_PULLDOWN;
-  GPIO_serial.Speed = GPIO_SPEED_HIGH;
-  GPIO_serial.Alternate = GPIO_AF7_USART1;	           		//Set alternate setting to USART1
-  HAL_GPIO_Init(BRD_D2_GPIO_PORT, &GPIO_serial);
-
-  /* Configure the D10 as the TX pin for USART1 */
-  GPIO_serial.Pin = BRD_D10_PIN;
-  GPIO_serial.Mode = GPIO_MODE_AF_PP;				             	//Enable alternate mode setting
-  GPIO_serial.Pull = GPIO_PULLUP;
-  GPIO_serial.Speed = GPIO_SPEED_HIGH;
-  GPIO_serial.Alternate = GPIO_AF7_USART1;		          	//Set alternate setting to USART1
-  HAL_GPIO_Init(BRD_D10_GPIO_PORT, &GPIO_serial);
-
-  UART_Handler.Instance          = USART1;
+  UART_Handler.Instance          = USART6;
   UART_Handler.Init.BaudRate     = 9600;
   UART_Handler.Init.WordLength   = UART_WORDLENGTH_8B;
   UART_Handler.Init.StopBits     = UART_STOPBITS_1;
@@ -108,9 +111,9 @@ void 	ESP8622_init( void ){
   UART_Handler.Init.Mode         = UART_MODE_TX_RX;
   UART_Handler.Init.OverSampling = UART_OVERSAMPLING_16;
 
-  HAL_NVIC_SetPriority(USART1_IRQn, 10, 0);
-  NVIC_SetVector(USART1_IRQn, &UART1_IRQHandler);
-  HAL_NVIC_EnableIRQ(USART1_IRQn);
+  HAL_NVIC_SetPriority(USART6_IRQn, 10, 0);
+  NVIC_SetVector(USART6_IRQn, &UART1_IRQHandler);
+  HAL_NVIC_EnableIRQ(USART6_IRQn);
 
   HAL_UART_Init(&UART_Handler);
 
@@ -143,7 +146,7 @@ void dma_Init(void) {
 	  /*##-3- Configure the DMA streams ##########################################*/
 	  /* Configure the DMA handler for Transmission process */
 	  hdma_tx.Instance                 = DMA2_Stream7;
-	  hdma_tx.Init.Channel             = DMA_CHANNEL_4;
+	  hdma_tx.Init.Channel             = DMA_CHANNEL_5;
 	  hdma_tx.Init.Direction           = DMA_MEMORY_TO_PERIPH;
 	  hdma_tx.Init.PeriphInc           = DMA_PINC_DISABLE;
 	  hdma_tx.Init.MemInc              = DMA_MINC_ENABLE;
@@ -270,6 +273,7 @@ void UART1_DMA_TX_IRQHandler(void) {
 
 
 uint8_t esp_send(uint8_t* send_String) {
+	int i;
 	if (USART1_Semaphore != NULL) {
 		if( xSemaphoreTake( USART1_Semaphore, ( TickType_t ) 1000 ) == pdTRUE ) {
 			uint8_t l = strlen(send_String);
@@ -277,6 +281,13 @@ uint8_t esp_send(uint8_t* send_String) {
 			if (HAL_UART_Transmit_DMA(&UART_Handler, (uint8_t*)uart_tx_buffer, l) != HAL_OK) {
 				return 0;
 			}
+//			for (i = 0; i < l; i++) {
+//				if (HAL_UART_Transmit(&UART_Handler, (uint8_t*)uart_tx_buffer+i, 1, 10) != HAL_OK) {
+//					for(;;) {
+//						//error
+//					}
+//				}
+//			}
 			return 1;
 		}
 	}
@@ -409,7 +420,7 @@ void handle_Messages(uint8_t pipe_no, uint8_t* message, uint8_t* raw_data) {
 
 
 	if ( type == 5) {
-		handle_Ultrasonic_Data(source, data_String, raw_data);
+		//handle_Ultrasonic_Data(source, data_String, raw_data);
 
 	}
 	if ( type == 4) {

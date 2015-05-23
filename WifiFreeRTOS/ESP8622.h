@@ -113,7 +113,6 @@ void add_AP(Access_Point*);
 uint8_t esp_Send(uint8_t*);
 void waitForPassed(int timeout);
 void waitForPrompt();
-void Delay(int x);
 float RSSItoDistance(int rssi);
 void handle_Access_Point (char* apString);
 void handle_data(char* data);

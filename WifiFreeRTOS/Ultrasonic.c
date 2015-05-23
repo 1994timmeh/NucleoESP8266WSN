@@ -3,7 +3,6 @@
 #include "stm32f4xx_hal_conf.h"
 #include "debug_printf.h"
 #include <stdint.h>
-#include <string.h>
 
 GPIO_InitTypeDef GPIO_InitStructure;
 TIM_IC_InitTypeDef  TIM_ICInitStructure;
