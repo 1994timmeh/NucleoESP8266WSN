@@ -39,7 +39,7 @@ SemaphoreHandle_t esp_Semaphore;
 /* Private function prototypes -----------------------------------------------*/
 void Hardware_init();
 void ApplicationIdleHook( void ); /* The idle hook is used to blink the Blue 'Alive LED' every second */
-void LED_Task( void );
+void testing_Task( void );
 void Testing_Task( void );
 void Software_timer( void );
 void node_Scan();
@@ -47,11 +47,11 @@ void node_Send();
 
 
 /* Task Priorities ------------------------------------------------------------*/
-#define mainLED_PRIORITY					( tskIDLE_PRIORITY + 2 )
+#define TESTING_PRIORITY					( tskIDLE_PRIORITY + 2 )
 
 
 /* Task Stack Allocations -----------------------------------------------------*/
-#define mainLED_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
+#define TESTING_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
 
 
 /**
@@ -67,8 +67,8 @@ int main( void ) {
 	esp_Semaphore = xSemaphoreCreateMutex();
 
 	/* Start the task to flash the LED. */
-	xTaskCreate( (void *) &Testing_Task, (const signed char *) "TEST", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY, NULL );
-	xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", mainLED_TASK_STACK_SIZE, NULL, mainLED_PRIORITY + 1, NULL );
+	xTaskCreate( (void *) &Testing_Task, (const signed char *) "TEST", TESTING_STACK_SIZE, NULL, TESTING_PRIORITY, NULL );
+	xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", TESTING_STACK_SIZE, NULL, TESTING_PRIORITY + 1, NULL );
 
 	/* Start the scheduler.
 
@@ -92,6 +92,27 @@ int main( void ) {
 void Testing_Task( void ) {
 	char SSID[50];
 	char buffer[10];
+<<<<<<< HEAD
+
+//	//Ultrasonic_init();
+//	debug_printf("Begin testing\n\n");
+//
+//	 Wifi_reset();
+//
+//	 debug_printf("I AM NODE %d\n\n", NODE_ID);
+//
+//	 Wifi_setmode();
+//
+//	  sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
+//	  Wifi_setAP(SSID,"password", 5, 0);
+//
+//	  Wifi_set_AP_IP("192.168.1.1");
+//
+//	 //Wifi_join("NUCLEOWSN1", "");
+//
+//	 Wifi_enserver();
+//	 Wifi_get_AP_IP();
+=======
 
 	char task_list_buffer[1000];
 
@@ -107,6 +128,7 @@ void Testing_Task( void ) {
 	Wifi_set_AP_IP("192.168.3.1");
 
 	Wifi_join("NUCLEOWSN1", "");
+>>>>>>> 052712330cba426caf377c3c80e5aadd96dc8573
 
 	Wifi_enserver();
 	Wifi_get_AP_IP();
