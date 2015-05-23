@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
-  * @file    ex14_fr_ledflashing/main.c
-  * @author  MDS
+  * @file    NOT EVEN THE EXAMPLE CODE!
+  * @author  NOT MDS
   * @date    04022015
   * @brief   FreeRTOS LED Flashing program.Creates a task to flash the onboard
   *			 Blue LED. Note the Idle task will also flash the Blue LED.
@@ -24,7 +24,7 @@
 #include "queue.h"
 #include "semphr.h"
 
-#define NODE_ID 1
+#define NODE_ID 3
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -92,6 +92,7 @@ int main( void ) {
 void Testing_Task( void ) {
 	char SSID[50];
 	char buffer[10];
+<<<<<<< HEAD
 
 //	//Ultrasonic_init();
 //	debug_printf("Begin testing\n\n");
@@ -111,45 +112,46 @@ void Testing_Task( void ) {
 //
 //	 Wifi_enserver();
 //	 Wifi_get_AP_IP();
+=======
 
-	 //Wifi_connectTCP("192.168.1.1", 8888);
+	char task_list_buffer[1000];
 
-	//Wifi_timesync();
+	Wifi_reset();
+
+	debug_printf("I AM NODE %d\n\n", NODE_ID);
+
+	Wifi_setmode();
+
+	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
+	Wifi_setAP(SSID,"password", 5, 0);
+
+	Wifi_set_AP_IP("192.168.3.1");
+
+	Wifi_join("NUCLEOWSN1", "");
+>>>>>>> 052712330cba426caf377c3c80e5aadd96dc8573
+
+	Wifi_enserver();
+	Wifi_get_AP_IP();
+
+	Wifi_connectTCP("192.168.1.1", 8888);
+
+	Wifi_timesync();
 
 	for (;;) {
 		/* Toggle LED */
 
-//		Wifi_listAPs();
+
+//		Dont need to list APs and this takes like 5 seconds to scan
+// 		Wifi_listAPs();
 //		Access_Point* ap = (Access_Point*)get_AP("NUCLEOWSN1");
 //		if (ap != NULL) {
 //		   //debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
 //		}
-//
-//		Ultrasonic_start();
-		// vTaskDelay(1000);
-		//
-		// // int len = sprintf(&buffer, "DA:[125%d]", Ultrasonic_getdist());
-		// // Wifi_senddata(0, buffer, len);
-		//
-		// vTaskDelay(1000);
-		//
-//		int len = sprintf(&buffer, "DA:[124%d]", ap->RSSI);
-//		Wifi_senddata(0, buffer, len);
-//
-//		debug_printf("RSSI: %d\n", ap->RSSI);
-//		debug_printf("Distance: %d\n", Ultrasonic_getdist());
-//		debug_printf("Width: %d\n",Ultrasonic_getwidth());
 
-		/* Delay the task for 1000ms */
+		BRD_LEDToggle();
 		vTaskDelay(1000);
 	}
 }
-
-
-void USART_Tx_Task( void ) {
-
-}
-
 
 void Software_timer(){
 	uint16_t ledsync  = 0;
@@ -276,7 +278,6 @@ void vApplicationIdleHook( void ) {
 		}
 	}
 }
-//Comment
 /**
   * @brief  vApplicationStackOverflowHook
   * @param  Task Handler and Task Name
