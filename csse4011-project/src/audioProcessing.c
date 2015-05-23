@@ -34,6 +34,7 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	// Initialise both data sequences as 0.0
 	arm_fill_f32(0.0,  micOneFFTdata, FFT_LENGTH);
 	arm_fill_f32(0.0,  micTwoFFTdata, FFT_LENGTH);
+
 	// Fill both data arrays with audio data, mic two data is reversed
 	arm_copy_f32(micOneData,  micOneFFTdata, AUDIO_FRAME_LENGTH);
 	arm_copy_f32(micTwoData + AUDIO_FRAME_LENGTH,  micTwoFFTdata, AUDIO_FRAME_LENGTH);
@@ -42,7 +43,7 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	arm_rfft_fast_f32(&fftStructures, micOneFFTdata, micOneFFT, ifftFlag);
 	arm_rfft_fast_f32(&fftStructures, micTwoFFTdata, micTwoFFT, ifftFlag);
 
-	// Multiply 
+	// Multiply
 	arm_cmplx_mult_cmplx_f32(micOneFFT, micTwoFFT, combinedData, FFT_LENGTH);
 	// Because first complex byte contains two packed real values
 	combinedData[0] = micOneFFT[0] * micTwoFFT[0];
