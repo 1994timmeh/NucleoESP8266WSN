@@ -88,13 +88,13 @@ int main( void ) {
 
 	BRD_init();
 	Hardware_init();
-	ESP8622_init(9600); //This initiates another task
 	esp_Semaphore = xSemaphoreCreateMutex();
 
 
 	/* adc sampling  setup */
 	adc_hardware_init();
 	timer_interupt_init();
+	audioProcessingInit();
 
 
 	/* Start the task to flash the LED. */
@@ -141,10 +141,15 @@ void Testing_Task( void ) {
 	debug_printf("Compelted Init\n");
 
 	for (;;) {
-		if (client_Pipe >= 0 && client_Pipe <= 4) {
-				Wifi_senddata(client_Pipe, test, 50);
-		}
-		vTaskDelay(200);
+//		if (client_Pipe >= 0 && client_Pipe <= 4) {
+//				Wifi_senddata(client_Pipe, test, 50);
+//		}
+
+		struct frameResults results;
+		audioProcessFrame(ready_data1, ready_data2, &results);
+		//print_results(results);
+
+		vTaskDelay(1);
 	}
 }
 
@@ -158,21 +163,21 @@ void timer_interupt_init(){
 	__TIM3_CLK_ENABLE();
 
 	/* Compute the prescaler value */
-	PrescalerValue = (uint16_t) ((SystemCoreClock/2)/500000);		//Set clock prescaler to 500kHz - SystemCoreClock is the system clock frequency.
+	//Set clock prescaler to 500kHz - SystemCoreClock is the system clock frequency.
+	PrescalerValue = (uint16_t) ((SystemCoreClock/2)/500000);
 
-	TIM_Init.Instance = TIM3;				//Enable Timer 2
-	TIM_Init.Init.Period = 4;			//Set period count to be 1ms, so timer interrupt occurs every 1ms.
-	TIM_Init.Init.Prescaler = PrescalerValue;	//Set presale value
-	TIM_Init.Init.ClockDivision = 0;			//Set clock division
-	TIM_Init.Init.RepetitionCounter = 0;	// Set Reload Value
+	TIM_Init.Instance = TIM3;						//Enable Timer 2
+	TIM_Init.Init.Period = 4;						//Set period count to be 1ms, so timer interrupt occurs every 1ms.
+	TIM_Init.Init.Prescaler = PrescalerValue;		//Set presale value
+	TIM_Init.Init.ClockDivision = 0;				//Set clock division
+	TIM_Init.Init.RepetitionCounter = 0;			// Set Reload Value
 	TIM_Init.Init.CounterMode = TIM_COUNTERMODE_UP;	//Set timer to count up.
 
 	/* Initialise Timer */
 	HAL_TIM_Base_Init(&TIM_Init);
 
 	/* Set priority of Timer 2 update Interrupt [0 (HIGH priority) to 15(LOW priority)] */
-	/* 	DO NOT SET INTERRUPT PRIORITY HIGHER THAN 3 */
-	HAL_NVIC_SetPriority(TIM3_IRQn, 3, 0);		//Set Main priority ot 10 and sub-priority ot 0.
+	HAL_NVIC_SetPriority(TIM3_IRQn, 3, 0);
 	NVIC_SetVector(TIM3_IRQn, (uint32_t)&tim2_irqhandler);
 
 	Tim3MasterConfigHandle.MasterOutputTrigger	= TIM_TRGO_UPDATE;
@@ -183,6 +188,10 @@ void timer_interupt_init(){
 
 	/* Start Timer */
 	HAL_TIM_Base_Start_IT(&TIM_Init);
+
+#ifdef ADCDEBUG
+		debug_printf("DEBUG: Timer init has completed\n");
+	#endif
 }
 
 void tim2_irqhandler( void ){
@@ -222,16 +231,6 @@ void adc_hardware_init() {
 
 	GPIO_InitStructure.Pin 		= BRD_A1_PIN;			//Set A0 pin
 	HAL_GPIO_Init(BRD_A1_GPIO_PORT, &GPIO_InitStructure);	//Initialise AO
-
-	GPIO_InitStructure.Pin 		= BRD_D0_PIN;			//Set A0 pin
-	GPIO_InitStructure.Mode 	= GPIO_MODE_OUTPUT_PP;		//Set to Analog input
-	GPIO_InitStructure.Pull 	= GPIO_PULLDOWN ;			//No Pull up resister
-	HAL_GPIO_Init(BRD_D0_GPIO_PORT, &GPIO_InitStructure);	//Initialise AO
-
-	GPIO_InitStructure.Pin 		= BRD_D1_PIN;			//Set A0 pin
-	GPIO_InitStructure.Mode 	= GPIO_MODE_OUTPUT_PP;		//Set to Analog input
-	GPIO_InitStructure.Pull 	= GPIO_PULLDOWN ;			//No Pull up resister
-	HAL_GPIO_Init(BRD_D1_GPIO_PORT, &GPIO_InitStructure);	//Initialise AO
 
 	DMAHandle1.Instance 					= DMA2_Stream0;
 	DMAHandle1.Init.Channel				= DMA_CHANNEL_0;
@@ -298,8 +297,7 @@ void adc_hardware_init() {
 		for(;;);
 	}
 
-	// WE NEED TO DO THE SAME THING FOR THE SECOND ADC :'( DMA1 A1
-
+	/* WE NEED TO DO THE SAME THING FOR THE SECOND ADC :'( DMA1 A1 */
 	DMAHandle2.Instance 				= DMA2_Stream2;
 	DMAHandle2.Init.Channel				= DMA_CHANNEL_1;
 	DMAHandle2.Init.Direction 			= DMA_PERIPH_TO_MEMORY;
@@ -365,16 +363,15 @@ void adc_hardware_init() {
 		for(;;);
 	}
 
+	#ifdef ADCDEBUG
+		debug_printf("DEBUG: ADC/DMA Init has completed\n");
+	#endif
+
 }
 
 void DMACompleteISR1( void ){
 	//Data transfer is complete! Handle the interupt.
 	HAL_DMA_IRQHandler(AdcHandle1.DMA_Handle);
-
-	// Output pulse to get sampling rate with LA
-	HAL_GPIO_WritePin(BRD_D0_GPIO_PORT, BRD_D0_PIN, 1);
-	Delay(1);
-	HAL_GPIO_WritePin(BRD_D0_GPIO_PORT, BRD_D0_PIN, 0);
 
 	data1[sampleNo1 % 256] = (float32_t)buffer1;
 	if(sampleNo1 == 256){
@@ -390,11 +387,6 @@ void DMACompleteISR1( void ){
 void DMACompleteISR2( void ){
 	//Data transfer is complete! Handle the interupt.
 	HAL_DMA_IRQHandler(AdcHandle2.DMA_Handle);
-
-	// Output pulse to get sampling rate with LA
-	HAL_GPIO_WritePin(BRD_D1_GPIO_PORT, BRD_D1_PIN, 1);
-	Delay(1);
-	HAL_GPIO_WritePin(BRD_D1_GPIO_PORT, BRD_D1_PIN, 0);
 
 	// int i;
 	// for(i = 0; i < BUFFER_SIZE; i++){
@@ -437,8 +429,6 @@ void Software_timer(){
 			flag = 1;
 		}
 
-
-
 		/*		node sync		*/
 
 		if (node_Sync > ((NODE_ID*3000) / portTICK_RATE_MS) && node_scan == 1) {
@@ -460,9 +450,6 @@ void Software_timer(){
 		if (node_Sync % 2000 < 20 && nodes_send == 0) {
 			nodes_send = 1;
 		}
-
-
-
 		vTaskDelay(1);
 	}
 }
@@ -531,8 +518,6 @@ void vApplicationIdleHook( void ) {
 		if ((xTaskGetTickCount() - xLastTx ) > (1000 / portTICK_RATE_MS)) {
 
 			xLastTx = xTaskGetTickCount();
-
-			//debug_printf("IDLE Tick %d\n", xLastTx);
 
 			/* Blink Alive LED */
 			BRD_LEDToggle();

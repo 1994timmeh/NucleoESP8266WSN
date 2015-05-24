@@ -3,6 +3,8 @@
 #include "audioProcessing.h"
 #include "arm_const_structs.h"
 
+#define AUDIODEBUG
+
 void arm_copy_complex(float32_t* pSrc, float32_t* pDst, uint32_t blockSize);
 
 // FFT Arrays
@@ -30,6 +32,10 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	uint8_t i, consecutiveFrame;
 	float32_t maxValue;
 	uint32_t maxBin;
+
+	#ifdef AUDIODEBUG
+		debug_printf("%d %d\n", (int)micOneData[0], (int)micTwoData[0]);
+	#endif
 
 	// Initialise both data sequences as 0.0
 	arm_fill_f32(0.0,  micOneFFTdata, FFT_LENGTH);
@@ -67,11 +73,22 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 			consecutiveFrame = 0;
 		}
 	}
+	// Update list
+	for (i = 0; i < SLIDING_WINDOW_LENGTH - 1; i++) {
+		pastBins[i+1] = pastBins[i];
+	}
+	pastBins[0] = maxBin;
 
 	// Populate result structure
 	results->validFrame = consecutiveFrame;
 	results->maxValue = maxValue;
 	results->maxBin = maxBin;
+
+	#ifdef AUDIODEBUG
+		debug_printf("validFrame: %d ", consecutiveFrame);
+		debug_printf("maxValue: %f ", maxValue);
+		debug_printf("maxBin: %d\n", maxBin);
+	#endif
 }
 
 void arm_copy_complex(float32_t* pSrc, float32_t* pDst, uint32_t blockSize) {
@@ -98,4 +115,17 @@ void arm_copy_complex(float32_t* pSrc, float32_t* pDst, uint32_t blockSize) {
 		/* Decrement the loop counter */
 		blkCnt--;
 	}
+}
+
+/**
+ * Prints a human readable version of the results struct
+ * @param results - Pointer to a frameResults struct
+ * @throws none
+ */
+void print_results(struct frameResults results){
+	debug_printf("=====RESULTS=====\n");
+	debug_printf("validFrame: %d\n", results.validFrame);
+	debug_printf("maxValue: %f\n", results.maxValue);
+	debug_printf("maxBin: %d\n\n", results.maxBin);
+
 }
