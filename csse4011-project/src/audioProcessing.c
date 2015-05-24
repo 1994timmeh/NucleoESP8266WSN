@@ -67,6 +67,11 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 			consecutiveFrame = 0;
 		}
 	}
+	// Update list
+	for (i = 0; i < SLIDING_WINDOW_LENGTH - 1; i++) {
+		pastBins[i+1] = pastBins[i];
+	}
+	pastBins[0] = maxBin;
 
 	// Populate result structure
 	results->validFrame = consecutiveFrame;
