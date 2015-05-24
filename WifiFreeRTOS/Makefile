@@ -9,7 +9,7 @@ COMMON_PATH=$(NP2_ROOT)/src/Libraries/common
 CMSIS_PATH=$(NP2_ROOT)/src/Libraries/cmsis
 FREERTOS_PATH=$(NP2_ROOT)/src/FreeRTOS
 
-DSP_CMSIS_PATH=/Users/tim/STM32Cube_FW_F4_V1.5.0/Drivers/CMSIS
+DSP_CMSIS_PATH=/home/csse3010/STM32Cube_FW_F4_V1.5.0/Drivers/CMSIS
 DSP_PATH=$(DSP_CMSIS_PATH)/DSP_Lib/Source
 
 PROJ_NAME=main
@@ -23,13 +23,26 @@ SRCS += $(USBCORE_PATH)/Src/*.c $(USBCDC_PATH)/Src/*.c $(VCP_PATH)/src/*.c
 SRCS += $(FREERTOS_PATH)/*.c $(FREERTOS_PATH)/portable/GCC/ARM_CM4F/*.c $(FREERTOS_PATH)/portable/MemMang/heap_2.c
 # all the files will be generated with this name (main.elf, main.bin, main.hex, etc)
 
-SRCS += $(DSP_PATH)/BasicMathFunctions/*.c
-SRCS += $(DSP_PATH)/ComplexMathFunctions/*.c
-SRCS += $(DSP_PATH)/FastMathFunctions/*.c
+#SRCS += $(DSP_PATH)/BasicMathFunctions/*.c
+#SRCS += $(DSP_PATH)/FastMathFunctions/*.c
+
+SRCS += $(DSP_PATH)/ComplexMathFunctions/arm_cmplx_mult_cmplx_f32.c
+
 SRCS += $(DSP_PATH)/CommonTables/*.c
-SRCS += $(DSP_PATH)/StatisticsFunctions/*.c
-SRCS += $(DSP_PATH)/SupportFunctions/*.c
-SRCS += $(DSP_PATH)/TransformFunctions/*.c
+
+SRCS += $(DSP_PATH)/StatisticsFunctions/arm_max_f32.c
+SRCS += $(DSP_PATH)/StatisticsFunctions/arm_power_f32.c
+SRCS += $(DSP_PATH)/StatisticsFunctions/arm_mean_f32.c
+SRCS += $(DSP_PATH)/StatisticsFunctions/arm_var_f32.c
+
+SRCS += $(DSP_PATH)/SupportFunctions/arm_copy_f32.c
+SRCS += $(DSP_PATH)/SupportFunctions/arm_fill_f32.c
+
+SRCS += $(DSP_PATH)/TransformFunctions/arm_bitreversal.c
+SRCS += $(DSP_PATH)/TransformFunctions/arm_rfft_fast_init_f32.c
+SRCS += $(DSP_PATH)/TransformFunctions/arm_rfft_fast_f32.c
+SRCS += $(DSP_PATH)/TransformFunctions/arm_cfft_f32.c
+SRCS += $(DSP_PATH)/TransformFunctions/arm_cfft_radix8_f32.c
 SRCS += $(DSP_PATH)/TransformFunctions/*.S
 
 ###################################################

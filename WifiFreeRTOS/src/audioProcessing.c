@@ -86,7 +86,7 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 
 	#ifdef AUDIODEBUG
 		debug_printf("validFrame: %d ", consecutiveFrame);
-		debug_printf("maxValue: %f ", maxValue);
+		debug_printf("maxValue: %d ", (int)(1000*maxValue));
 		debug_printf("maxBin: %d\n", maxBin);
 	#endif
 }
