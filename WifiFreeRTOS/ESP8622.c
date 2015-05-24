@@ -267,7 +267,7 @@ void UART1_IRQHandler(void)
   */
 void UART1_DMA_TX_IRQHandler(void) {
   HAL_DMA_IRQHandler(UART_Handler.hdmatx);
-  xSemaphoreGiveFromISR(USART1_Semaphore, &Testing_Task);
+  xSemaphoreGiveFromISR((xSemaphoreHandle) USART1_Semaphore, (uint32_t*)&Testing_Task);
 
 }
 
@@ -416,6 +416,8 @@ void handle_Messages(uint8_t pipe_no, uint8_t* message, uint8_t* raw_data) {
 		debug_printf("client connected\n\r");
 		/*	reply with same data	*/
 
+		Wifi_senddata(client_Pipe, "Hello", 5);
+
 	}
 
 
@@ -427,7 +429,6 @@ void handle_Messages(uint8_t pipe_no, uint8_t* message, uint8_t* raw_data) {
 		handle_RSSI_Data(source, data_String,  raw_data);
 	}
 	vPortFree(data_String);
-
 }
 
 
@@ -661,9 +662,9 @@ void Wifi_enserver(){
   //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_SERVE, 10);
   esp_send(command);
   waitForPassed(5000);
+	}
+		xSemaphoreGive(esp_Semaphore);
 		}
-			xSemaphoreGive(esp_Semaphore);
-			}
 }
 
 void Wifi_connecttest(){
@@ -725,7 +726,7 @@ void Wifi_connectTCP( char* ip, int port){
 		}
 }
 
-void Wifi_senddata(uint8_t pipe_no, uint8_t* data, int length){
+void Wifi_senddata(uint8_t pipe_no, const char* data, int length){
 	if (esp_Semaphore != NULL) {
 			if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
 				  char command[50];

@@ -15,14 +15,16 @@
 #include "debug_printf.h"
 #include "ESP8622.h"
 #include "Ultrasonic.h"
-#include "stddef.h"
+#include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
 /* Scheduler includes. */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+#include "audioProcessing.h"
 
 #define NODE_ID 1
 
@@ -41,18 +43,14 @@ DMA_HandleTypeDef DMAHandle2;
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-int sampleNo = 0;
+volatile int sampleNo1 = 0, sampleNo2 = 0;
 // Audio sample buffers
-uint16_t data1[BUFFER_SIZE];
-uint16_t data2[BUFFER_SIZE];
-uint16_t ready_data1[BUFFER_SIZE];
-uint16_t ready_data2[BUFFER_SIZE];
-
-
-
-
-
-
+float data1[BUFFER_SIZE];
+float data2[BUFFER_SIZE];
+float32_t ready_data1[BUFFER_SIZE];
+float32_t ready_data2[BUFFER_SIZE];
+uint32_t buffer1;
+uint32_t buffer2;
 
 //extern typedef struct Ap Access_Point;
 int8_t client_Pipe = -1;
@@ -79,12 +77,6 @@ void DMACompleteISR2( void );
 void Error_Handler( void );
 void Delay(uint32_t cycles);
 
-/* Task Priorities ------------------------------------------------------------*/
-#define TESTING_PRIORITY					( tskIDLE_PRIORITY + 4 )
-
-
-/* Task Stack Allocations -----------------------------------------------------*/
-#define TESTING_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
 
 
 /**
@@ -136,61 +128,19 @@ void Testing_Task( void ) {
 	char buffer[10];
 	static const char test[50] = "aaaaaaaaaa1111111111222222222233333333334444444444";
 	int i;
-//	//Ultrasonic_init();
-//	debug_printf("Begin testing\n\n");
 
-	 Wifi_reset();
-	 Wifi_setBaudRate(115200);
-	 Wifi_reset();
-	 ESP8622_init(115200);
-
-	 debug_printf("I AM NODE %d\n\n", NODE_ID);
-
-	 Wifi_setmode();
-
-	  sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
-	  Wifi_setAP(SSID,"password", 5, 0);
-
-	  Wifi_set_AP_IP("192.168.3.1");
-//
-//	 //Wifi_join("NUCLEOWSN1", "");
-//
-	 Wifi_enserver();
-	 Wifi_get_AP_IP();
-
-	 //Wifi_connectTCP("192.168.1.1", 8888);
-
-	//Wifi_timesync();
+	Wifi_reset();
+	ESP8622_init(115200);
+	debug_printf("I AM NODE %d\n\n", NODE_ID);
+	Wifi_setmode();
+	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
+	Wifi_setAP(SSID,"password", 5, 0);
+	Wifi_set_AP_IP("192.168.3.1");
+	Wifi_enserver();
+	Wifi_get_AP_IP();
+	debug_printf("Compelted Init\n");
 
 	for (;;) {
-		/* Toggle LED */
-
-//		Wifi_listAPs();
-//		Access_Point* ap = (Access_Point*)get_AP("NUCLEOWSN1");
-//		if (ap != NULL) {
-//		   //debug_printf("RSSI: %d Distance: %f\n", ap->RSSI, RSSItoDistance(ap->RSSI));
-//		}
-//
-//		Ultrasonic_start();
-		// vTaskDelay(1000);
-		//
-		// // int len = sprintf(&buffer, "DA:[125%d]", Ultrasonic_getdist());
-		// // Wifi_senddata(0, buffer, len);
-		//
-		// vTaskDelay(1000);
-		//
-//		int len = sprintf(&buffer, "DA:[124%d]", ap->RSSI);
-//		Wifi_senddata(0, buffer, len);
-//
-//		debug_printf("RSSI: %d\n", ap->RSSI);
-//		debug_printf("Distance: %d\n", Ultrasonic_getdist());
-//		debug_printf("Width: %d\n",Ultrasonic_getwidth());
-
-		/* Delay the task for 1000ms */
-
-		for(i = 0; i < BUFFER_SIZE; i++){
-					debug_printf("%03X %03X\n", ready_data1[i], ready_data2[i]);
-				}
 		if (client_Pipe >= 0 && client_Pipe <= 4) {
 				Wifi_senddata(client_Pipe, test, 50);
 		}
@@ -235,7 +185,6 @@ void timer_interupt_init(){
 	HAL_TIM_Base_Start_IT(&TIM_Init);
 }
 
-
 void tim2_irqhandler( void ){
 	__HAL_TIM_CLEAR_IT(&TIM_Init, TIM_IT_UPDATE);
 }
@@ -247,7 +196,8 @@ void tim2_irqhandler( void ){
   * @retval None
   */
 void adc_hardware_init() {
-
+	BRD_LEDInit();
+	BRD_LEDOff();
 
 	GPIO_InitTypeDef GPIO_InitStructure;
 
@@ -272,6 +222,16 @@ void adc_hardware_init() {
 
 	GPIO_InitStructure.Pin 		= BRD_A1_PIN;			//Set A0 pin
 	HAL_GPIO_Init(BRD_A1_GPIO_PORT, &GPIO_InitStructure);	//Initialise AO
+
+	GPIO_InitStructure.Pin 		= BRD_D0_PIN;			//Set A0 pin
+	GPIO_InitStructure.Mode 	= GPIO_MODE_OUTPUT_PP;		//Set to Analog input
+	GPIO_InitStructure.Pull 	= GPIO_PULLDOWN ;			//No Pull up resister
+	HAL_GPIO_Init(BRD_D0_GPIO_PORT, &GPIO_InitStructure);	//Initialise AO
+
+	GPIO_InitStructure.Pin 		= BRD_D1_PIN;			//Set A0 pin
+	GPIO_InitStructure.Mode 	= GPIO_MODE_OUTPUT_PP;		//Set to Analog input
+	GPIO_InitStructure.Pull 	= GPIO_PULLDOWN ;			//No Pull up resister
+	HAL_GPIO_Init(BRD_D1_GPIO_PORT, &GPIO_InitStructure);	//Initialise AO
 
 	DMAHandle1.Instance 					= DMA2_Stream0;
 	DMAHandle1.Init.Channel				= DMA_CHANNEL_0;
@@ -304,7 +264,7 @@ void adc_hardware_init() {
 	DMAHandle1.Parent 			= &AdcHandle1;
 
 	HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 10, 1);
-	NVIC_SetVector(DMA2_Stream0_IRQn, (uint16_t)&DMACompleteISR1);
+	NVIC_SetVector(DMA2_Stream0_IRQn, (uint32_t)&DMACompleteISR1);
 	HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
 
@@ -331,7 +291,7 @@ void adc_hardware_init() {
 		for(;;);
 	}
 
-	if(HAL_ADC_Start_DMA(&AdcHandle1, (uint32_t*)data1, BUFFER_SIZE) != HAL_OK){
+	if(HAL_ADC_Start_DMA(&AdcHandle1, (uint32_t*)(&buffer1), 1) != HAL_OK){
 		//Init failed
 		BRD_LEDOn();
 		debug_printf("ERROR");
@@ -371,7 +331,7 @@ void adc_hardware_init() {
 	DMAHandle2.Parent 			= &AdcHandle2;
 
 	HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 10, 1);
-	NVIC_SetVector(DMA2_Stream2_IRQn, (uint16_t)&DMACompleteISR2);
+	NVIC_SetVector(DMA2_Stream2_IRQn, (uint32_t)&DMACompleteISR2);
 	HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
 
 
@@ -398,7 +358,7 @@ void adc_hardware_init() {
 		for(;;);
 	}
 
-	if(HAL_ADC_Start_DMA(&AdcHandle2, (uint32_t*)data2, BUFFER_SIZE) != HAL_OK){
+	if(HAL_ADC_Start_DMA(&AdcHandle2, (uint32_t*)(&buffer2), 1) != HAL_OK){
 		//Init failed
 		BRD_LEDOn();
 		debug_printf("ERROR");
@@ -407,29 +367,48 @@ void adc_hardware_init() {
 
 }
 
-void HAL_ADC_ErrorCallback (ADC_HandleTypeDef * hadc){
-	debug_printf("ADC ERROR\n");
-}
-
 void DMACompleteISR1( void ){
 	//Data transfer is complete! Handle the interupt.
 	HAL_DMA_IRQHandler(AdcHandle1.DMA_Handle);
 
-	int i;
-	for(i = 0; i < BUFFER_SIZE; i++){
-		ready_data1[i] = data1[i];
+	// Output pulse to get sampling rate with LA
+	HAL_GPIO_WritePin(BRD_D0_GPIO_PORT, BRD_D0_PIN, 1);
+	Delay(1);
+	HAL_GPIO_WritePin(BRD_D0_GPIO_PORT, BRD_D0_PIN, 0);
+
+	data1[sampleNo1 % 256] = (float32_t)buffer1;
+	if(sampleNo1 == 256){
+		int i = 0;
+		for(i = 0; i < 256; i++){
+			ready_data1[i] = data1[i];
+		}
+		sampleNo1 = 0;
 	}
+	sampleNo1++;
 }
 
 void DMACompleteISR2( void ){
 	//Data transfer is complete! Handle the interupt.
 	HAL_DMA_IRQHandler(AdcHandle2.DMA_Handle);
 
+	// Output pulse to get sampling rate with LA
+	HAL_GPIO_WritePin(BRD_D1_GPIO_PORT, BRD_D1_PIN, 1);
+	Delay(1);
+	HAL_GPIO_WritePin(BRD_D1_GPIO_PORT, BRD_D1_PIN, 0);
 
-	int i;
-	for(i = 0; i < BUFFER_SIZE; i++){
-		ready_data2[i] = data2[i];
+	// int i;
+	// for(i = 0; i < BUFFER_SIZE; i++){
+	// 	ready_data2[i] = data2[i];
+	// }
+	data2[sampleNo2 % 256] = (float32_t)buffer2;
+	if(sampleNo2 == 256){
+		int i = 0;
+		for(i = 0; i < 256; i++){
+			ready_data2[i] = data2[i];
+		}
+		sampleNo2 = 0;
 	}
+	sampleNo2++;
 }
 
 
