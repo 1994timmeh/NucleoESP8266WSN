@@ -232,10 +232,10 @@ void UART1_IRQHandler(void)
 {
 	uint8_t c;
 	 //check data available
-    if ((USART1->SR & USART_FLAG_RXNE) != (uint16_t)RESET) {
+    if ((USART6->SR & USART_FLAG_RXNE) != (uint16_t)RESET) {
     	// clear the flag
     	__HAL_USART_CLEAR_FLAG(&UART_Handler, USART_IT_RXNE);
-    	c = USART1->DR & 0xFF;		/* don't need no HAL */
+    	c = USART6->DR & 0xFF;		/* don't need no HAL */
 
     	//logic
     	// if not \n or \r add to line buffer
@@ -485,7 +485,7 @@ void Wifi_reset(){
 }
 
 /* Joins my home network */
-void Wifi_join(char SSID[50], char password[50]){
+void Wifi_join(char* SSID, char* password){
 	if (esp_Semaphore != NULL) {
 		if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
   char command[50];
@@ -558,7 +558,7 @@ void Wifi_status(){
 /* Sets the wifi ap
  * @param sec 0 for no password
  */
-void Wifi_setAP(char SSID[50], char password[50], uint8_t chan, uint8_t sec){
+void Wifi_setAP(char* SSID, char* password, uint8_t chan, uint8_t sec){
 	if (esp_Semaphore != NULL) {
 		if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
   char command[50];
@@ -688,7 +688,7 @@ void Wifi_checkfirmware(){
 			}
 }
 
-void Wifi_connectTCP( char ip[50], int port){
+void Wifi_connectTCP( char* ip, int port){
 	if (esp_Semaphore != NULL) {
 	if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
   char command[50];
@@ -701,11 +701,12 @@ void Wifi_connectTCP( char ip[50], int port){
 		}
 }
 
-void Wifi_senddata(uint8_t pipe_no, char data[50], int length){
+void Wifi_senddata(uint8_t pipe_no, uint8_t* data, int length){
 	if (esp_Semaphore != NULL) {
 			if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
 				  char command[50];
 				  char send_data[50];
+				  char line_break[3] = "\n\r\0";
 				//  char tmp[20];
 				//
 				//  int len = sprintf(tmp, WIFI_CMD_SEND_DATA, length);
@@ -717,9 +718,11 @@ void Wifi_senddata(uint8_t pipe_no, char data[50], int length){
 				  esp_send(command);
 				  vTaskDelay(50); //TODO Check this delay isn't too short
 
-				  len = sprintf(send_data, "%s\n\r", data);
 
+				 memcpy(send_data, data, length);
+				 memcpy(send_data+length, line_break, 3);
 				  //HAL_UART_Transmit(&UART_Handler, send_data, len, 10);
+				 vTaskDelay(50);
 				  esp_send(send_data);
 				  waitForPassed(5000);
 				 xSemaphoreGive(esp_Semaphore);

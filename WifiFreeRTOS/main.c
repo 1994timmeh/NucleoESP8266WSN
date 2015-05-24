@@ -80,7 +80,7 @@ void Error_Handler( void );
 void Delay(uint32_t cycles);
 
 /* Task Priorities ------------------------------------------------------------*/
-#define TESTING_PRIORITY					( tskIDLE_PRIORITY + 2 )
+#define TESTING_PRIORITY					( tskIDLE_PRIORITY + 4 )
 
 
 /* Task Stack Allocations -----------------------------------------------------*/
@@ -134,6 +134,7 @@ int main( void ) {
 void Testing_Task( void ) {
 	char SSID[50];
 	char buffer[10];
+	static const char test[50] = "aaaaaaaaaa1111111111222222222233333333334444444444";
 	int i;
 //	//Ultrasonic_init();
 //	debug_printf("Begin testing\n\n");
@@ -186,13 +187,11 @@ void Testing_Task( void ) {
 
 		for(i = 0; i < BUFFER_SIZE; i++){
 					debug_printf("%03X %03X\n", ready_data1[i], ready_data2[i]);
-					if (client_Pipe >= 0 && client_Pipe <= 4) {
-							Wifi_senddata(client_Pipe, ready_data1, BUFFER_SIZE);
-							/* HACK HERE	*/
-					}
-
 				}
-		vTaskDelay(3000);
+		if (client_Pipe >= 0 && client_Pipe <= 4) {
+				Wifi_senddata(client_Pipe, test, 50);
+		}
+		vTaskDelay(200);
 	}
 }
 
