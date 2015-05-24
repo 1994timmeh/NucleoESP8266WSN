@@ -79,7 +79,7 @@ typedef struct Access_Points {
 void UART_Processor( void );
 
 // Starting functions
-void ESP8622_init( void );
+void ESP8622_init( uint32_t baud );
 void dma_Init( void );
 void ESP8622_send_test( void );
 
@@ -95,7 +95,7 @@ void Wifi_checkfirmware();
 void Wifi_connectTCP( char ip[50], int port);
 void Wifi_timesync();
 void handle_RSSI_Data(uint8_t node, uint8_t* data_String,  uint8_t* raw_data);
-
+void Wifi_setBaudRate(uint32_t baud);
 
 void Wifi_get_station_IP();
 void Wifi_get_AP_IP();

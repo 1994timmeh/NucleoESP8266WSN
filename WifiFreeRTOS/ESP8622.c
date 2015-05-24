@@ -51,7 +51,7 @@ extern void Testing_Task( void );
   * @author Timmy Hadwen
   * @author Michael Thoreau
   */
-void 	ESP8622_init( void ){
+void 	ESP8622_init( uint32_t baud ){
   GPIO_InitTypeDef GPIO_serial;
 
   __USART6_CLK_ENABLE();
@@ -103,7 +103,7 @@ void 	ESP8622_init( void ){
 	HAL_GPIO_Init(BRD_D1_GPIO_PORT, &GPIO_serial);
 
   UART_Handler.Instance          = USART6;
-  UART_Handler.Init.BaudRate     = 9600;
+  UART_Handler.Init.BaudRate     = baud;
   UART_Handler.Init.WordLength   = UART_WORDLENGTH_8B;
   UART_Handler.Init.StopBits     = UART_STOPBITS_1;
   UART_Handler.Init.Parity       = UART_PARITY_NONE;
@@ -688,6 +688,30 @@ void Wifi_checkfirmware(){
 			}
 }
 
+/* set wifi serial baudrate	*/
+void Wifi_setBaudRate(uint32_t baud) {
+	uint8_t command[20];
+	if (esp_Semaphore != NULL) {
+			if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
+				switch (baud) {
+					case 9600:
+					case 57600:
+					case 115200:
+					case 230400:
+						sprintf(command, "AT+CIOBAUD=%d\r\n", baud);
+						esp_send(command);
+						waitForPassed(5000);
+						break;
+					default:
+						debug_printf("ERROR: baud rate not supported");
+						break;
+				}
+				xSemaphoreGive(esp_Semaphore);
+			}
+	}
+
+}
+
 void Wifi_connectTCP( char* ip, int port){
 	if (esp_Semaphore != NULL) {
 	if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
@@ -743,7 +767,14 @@ float RSSItoDistance(int rssi){
 }
 
 
-/*      AP list helpers     */
+
+
+
+
+
+
+/**********      AP list helpers    *********************************************************************/
+
 void index_Add_AP(Access_Point* access_Point, uint8_t index) {
     uint8_t i = 0;
     if (index == 0) {
@@ -767,6 +798,9 @@ Access_Point* get_AP(char* essid) {
 	}
 	return NULL;
 }
+
+
+
 
 /*
  * @Brief adds access points to start of the list, removes old entries

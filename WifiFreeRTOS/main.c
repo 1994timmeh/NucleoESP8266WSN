@@ -96,7 +96,7 @@ int main( void ) {
 
 	BRD_init();
 	Hardware_init();
-	ESP8622_init(); //This initiates another task
+	ESP8622_init(9600); //This initiates another task
 	esp_Semaphore = xSemaphoreCreateMutex();
 
 
@@ -140,6 +140,9 @@ void Testing_Task( void ) {
 //	debug_printf("Begin testing\n\n");
 
 	 Wifi_reset();
+	 Wifi_setBaudRate(115200);
+	 Wifi_reset();
+	 ESP8622_init(115200);
 
 	 debug_printf("I AM NODE %d\n\n", NODE_ID);
 
