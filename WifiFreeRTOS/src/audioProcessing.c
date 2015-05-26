@@ -13,6 +13,7 @@ float32_t micTwoFFTdata[FFT_LENGTH];
 float32_t micOneFFT[2*FFT_LENGTH];
 float32_t micTwoFFT[2*FFT_LENGTH];
 float32_t combinedData[2*FFT_LENGTH];
+
 // FFT Variables
 uint32_t ifftFlag = 0;
 uint32_t doBitReverse = 1;
@@ -33,10 +34,6 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	float32_t maxValue;
 	uint32_t maxBin;
 
-	#ifdef AUDIODEBUG
-		debug_printf("%d %d\n", (int)micOneData[0], (int)micTwoData[0]);
-	#endif
-
 	// Initialise both data sequences as 0.0
 	arm_fill_f32(0.0,  micOneFFTdata, FFT_LENGTH);
 	arm_fill_f32(0.0,  micTwoFFTdata, FFT_LENGTH);
@@ -44,6 +41,7 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	// Fill both data arrays with audio data, mic two data is reversed
 	arm_copy_f32(micOneData,  micOneFFTdata, AUDIO_FRAME_LENGTH);
 	arm_copy_f32(micTwoData + AUDIO_FRAME_LENGTH,  micTwoFFTdata, AUDIO_FRAME_LENGTH);
+
 	// Perform complex fft on mic data
 	ifftFlag = 0;
 	arm_rfft_fast_f32(&fftStructures, micOneFFTdata, micOneFFT, ifftFlag);
@@ -87,7 +85,7 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	#ifdef AUDIODEBUG
 		debug_printf("validFrame: %d ", consecutiveFrame);
 		debug_printf("maxValue: %d ", (int)(1000*maxValue));
-		debug_printf("maxBin: %d\n", maxBin);
+		debug_printf("maxBin: %d\n", (int)maxBin);
 	#endif
 }
 

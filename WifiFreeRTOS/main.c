@@ -56,6 +56,7 @@ uint32_t buffer2;
 int8_t client_Pipe = -1;
 int32_t time_Offset = 0;	// time offset relative to master -time means infront
 SemaphoreHandle_t esp_Semaphore;
+SemaphoreHandle_t processing_Semaphore;
 
 
 /* Private function prototypes -----------------------------------------------*/
@@ -89,6 +90,7 @@ int main( void ) {
 	BRD_init();
 	Hardware_init();
 	esp_Semaphore = xSemaphoreCreateMutex();
+	vSemaphoreCreateBinary(processing_Semaphore);
 
 
 	/* adc sampling  setup */
@@ -131,15 +133,15 @@ void Testing_Task( void ) {
 	static const char test[50] = "aaaaaaaaaa1111111111222222222233333333334444444444";
 	int i;
 
-	//Wifi_reset();
-	//ESP8622_init(115200);
-	//debug_printf("I AM NODE %d\n\n", NODE_ID);
-	//Wifi_setmode();
-	//sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
-	//Wifi_setAP(SSID,"password", 5, 0);
-	//Wifi_set_AP_IP("192.168.3.1");
-	//Wifi_enserver();
-	//Wifi_get_AP_IP();
+	Wifi_reset();
+	ESP8622_init(115200);
+	debug_printf("I AM NODE %d\n\n", NODE_ID);
+	Wifi_setmode();
+	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
+	Wifi_setAP(SSID,"password", 5, 0);
+	Wifi_set_AP_IP("192.168.3.1");
+	Wifi_enserver();
+	Wifi_get_AP_IP();
 	debug_printf("Compelted Init\n");
 
 	for (;;) {
@@ -148,10 +150,11 @@ void Testing_Task( void ) {
 //		}
 
 		struct frameResults results;
-		audioProcessFrame(test1, test2, &results);
-		//print_results(results);
+		//audioProcessFrame(test1, test2, &results);
 
-		vTaskDelay(1);
+		if(xSemaphoreTake(processing_Semaphore, 1) == pdTRUE) {
+			audioProcessFrame(ready_data1, ready_data2, &results);
+		}
 	}
 }
 
@@ -371,36 +374,57 @@ void adc_hardware_init() {
 
 }
 
+float32_t average1, min1, max1;
 void DMACompleteISR1( void ){
 	//Data transfer is complete! Handle the interupt.
 	HAL_DMA_IRQHandler(AdcHandle1.DMA_Handle);
 
 	data1[sampleNo1 % 256] = (float32_t)buffer1;
+
+	//TODO Move these if there are issues with speed
+	if(buffer1 > max1)
+		max1 = buffer1;
+	if(buffer1 < min1)
+		min1 = buffer1;
+	//TODO Move these if there are issues with speed
 	if(sampleNo1 == 256){
 		int i = 0;
+		float32_t median = (max1-min1) + min1;
 		for(i = 0; i < 256; i++){
-			ready_data1[i] = data1[i];
+			ready_data1[i] = (data1[i]-median)/1000;
 		}
 		sampleNo1 = 0;
+		max1 = 0;
+		min1 = 0;
+		average1 = 0;
+		xSemaphoreGiveFromISR(processing_Semaphore, NULL);
 	}
 	sampleNo1++;
 }
 
+float32_t average2, min2, max2;
 void DMACompleteISR2( void ){
 	//Data transfer is complete! Handle the interupt.
 	HAL_DMA_IRQHandler(AdcHandle2.DMA_Handle);
 
-	// int i;
-	// for(i = 0; i < BUFFER_SIZE; i++){
-	// 	ready_data2[i] = data2[i];
-	// }
+	//TODO Move these if there are issues with speed
+	if(buffer2 > max2)
+		max2 = buffer2;
+	if(buffer2 < min2)
+		min2 = buffer2;
+	//TODO Move these if there are issues with speed
+
 	data2[sampleNo2 % 256] = (float32_t)buffer2;
 	if(sampleNo2 == 256){
 		int i = 0;
+		float32_t median = (max2-min2) + min2;
 		for(i = 0; i < 256; i++){
-			ready_data2[i] = data2[i];
+			ready_data2[255-i] = (data2[i]-median)/1000;
 		}
 		sampleNo2 = 0;
+		max2 = 0;
+		min2 = 0;
+		average2 = 0;
 	}
 	sampleNo2++;
 }
