@@ -391,7 +391,7 @@ void DMACompleteISR1( void ){
 		int i = 0;
 		float32_t median = (max1-min1) + min1;
 		for(i = 0; i < 256; i++){
-			ready_data1[i] = (data1[i]-median)/1000;
+			ready_data1[i] = (data1[i]-median)/10;
 		}
 		sampleNo1 = 0;
 		max1 = 0;
@@ -419,7 +419,7 @@ void DMACompleteISR2( void ){
 		int i = 0;
 		float32_t median = (max2-min2) + min2;
 		for(i = 0; i < 256; i++){
-			ready_data2[255-i] = (data2[i]-median)/1000;
+			ready_data2[255-i] = (data2[i]-median)/10;
 		}
 		sampleNo2 = 0;
 		max2 = 0;
