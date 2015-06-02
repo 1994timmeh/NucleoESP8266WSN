@@ -15,7 +15,7 @@
 #define NODE_ID 1
 
 #define USART_TX_TASK_PRIORITY					( tskIDLE_PRIORITY + 4 )
-#define USART_TX_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 10 )
+#define USART_TX_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 15 )
 
 UART_HandleTypeDef UART_Handler;
 DMA_HandleTypeDef hdma_tx;
@@ -196,12 +196,12 @@ void UART_Processor( void ){
 
   for(;;){
       if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
-        debug_printf("LINE RX: %s\n", new_data);
+        //debug_printf("LINE RX: %s\n", new_data);
         //We have new data analyze it
         if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
           BRD_LEDToggle();
-        	debug_printf("1: %s\n", new_data);
-          debug_printf("Data: %s\n", &(new_data[5]));
+        	//debug_printf("1: %s\n", new_data);
+         // debug_printf("Data: %s\n", &(new_data[5]));
           handle_data(new_data+5);
 
         } else if(strncmp(&(new_data[0]), "OK", 2) == 0 || strncmp(&(new_data[0]), "ready", 5) == 0
@@ -273,7 +273,6 @@ void UART1_DMA_TX_IRQHandler(void) {
 
 
 uint8_t esp_send(uint8_t* send_String) {
-	debug_printf("Sending %s\n", send_String);
 	int i;
 	if (USART1_Semaphore != NULL) {
 		if( xSemaphoreTake( USART1_Semaphore, ( TickType_t ) 1000 ) == pdTRUE ) {
@@ -390,10 +389,7 @@ void handle_Messages(uint8_t pipe_no, uint8_t* message, uint8_t* raw_data) {
 	dest = *(message++) - '0';
 	source = *(message++) - '0';
 	type = *(message++) - '0';
-	debug_printf("Pipe: %d\n\r", pipe_no);
-	debug_printf("Destination: %d\n\r", dest);
-	debug_printf("Source: %d\n\r", source);
-	debug_printf("Type: %d\n\r", type);
+
 	i = 0;
 	do {
 		c = *(message++);
@@ -406,19 +402,21 @@ void handle_Messages(uint8_t pipe_no, uint8_t* message, uint8_t* raw_data) {
 		}
 	} while (c);
 
-	debug_printf("Data received: %s\n\r", data_String);
+	//debug_printf("Data received: %s\n\r", data_String);
 
-	sprintf(ack_String, "DA:[%d%d7ACK]", source, NODE_ID);
+	//sprintf(ack_String, "DA:[%d%d7ACK]", source, NODE_ID);
 	//Wifi_senddata(pipe_no, ack_String, strlen(ack_String));
 
 	/* 	setup client	*/
 	if (source == 0) {
 		client_Pipe = pipe_no;
 		debug_printf("client connected\n\r");
-		/*	reply with same data	*/
+	}
 
-		Wifi_senddata(client_Pipe, "Hello", 5);
-
+	// Data for client
+	if (dest == 0){
+		debug_printf("FORWARDING: %d\n", raw_data);
+		Wifi_sendtoclient(raw_data, strlen(raw_data));
 	}
 
 
@@ -736,14 +734,12 @@ void Wifi_senddata(uint8_t pipe_no, const char* data, int length){
 	if (esp_Semaphore != NULL) {
 			if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
 				  char command[50];
-				  char send_data[50];
+				  char send_data[500];
 				  char line_break[3] = "\n\r\0";
 				//  char tmp[20];
 				//
 				//  int len = sprintf(tmp, WIFI_CMD_SEND_DATA, length);
 				  int len = sprintf(command, WIFI_CMD_SEND_DATA, pipe_no, length);
-
-				  debug_printf("Sending data\n");
 
 				  //HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
 				  esp_send(command);
