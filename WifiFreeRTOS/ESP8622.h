@@ -44,8 +44,8 @@ typedef struct{
 
 #define WIFI_CMD_SEND_DATA "AT+CIPSEND=%d,%d\r\n"
 
-#define TESTING_PRIORITY					( tskIDLE_PRIORITY + 2 )
-#define TESTING_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
+#define WIFI_PRIORITY					( tskIDLE_PRIORITY + 2 )
+#define WIFI_STACK_SIZE		( configMINIMAL_STACK_SIZE * 10 )
 
 #define SEC 0x7FFF00
 #define task_loop for(;;)
@@ -101,6 +101,7 @@ void Wifi_get_station_IP();
 void Wifi_get_AP_IP();
 void Wifi_set_station_IP(char* IP_Addr);
 void Wifi_set_AP_IP(char* IP_Addr);
+void Wifi_sendtoclient(uint8_t* data, int length);
 
 
 
@@ -122,3 +123,4 @@ void handle_Messages(uint8_t pipe_no, uint8_t* message, uint8_t* raw_data);
 // Interrupts
 void UART1_IRQHandler(void);
 void UART1_DMA_TX_IRQHandler(void);
+

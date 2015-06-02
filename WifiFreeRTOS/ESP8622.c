@@ -14,8 +14,8 @@
 #define FALSE 0
 #define NODE_ID 1
 
-#define USART_TX_TASK_PRIORITY					( tskIDLE_PRIORITY + 1 )
-#define USART_TX_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
+#define USART_TX_TASK_PRIORITY					( tskIDLE_PRIORITY + 4 )
+#define USART_TX_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 10 )
 
 UART_HandleTypeDef UART_Handler;
 DMA_HandleTypeDef hdma_tx;
@@ -43,7 +43,7 @@ extern int32_t time_Offset;
 extern int8_t client_Pipe;
 APs* Access_Points;
 
-extern void Testing_Task( void );
+extern void Audio_Task( void );
 /**
   * This module is for the ESP8622 'El Cheapo' Wifi Module.
   * It uses pins D10 (TX) and D2 (RX) and Serial 1 on the NucleoF401RE Dev Board
@@ -124,7 +124,7 @@ void 	ESP8622_init( uint32_t baud ){
 	  debug_printf("UART Interrupt init FAIL");
   }
 
-  xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", TESTING_STACK_SIZE * 5, NULL, TESTING_PRIORITY + 1, NULL );
+  xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", WIFI_STACK_SIZE, NULL, WIFI_PRIORITY, NULL );
 
   Data_Queue = xQueueCreate(20, sizeof(char[100]));
   Access_Points = pvPortMalloc(sizeof(APs));
@@ -267,12 +267,13 @@ void UART1_IRQHandler(void)
   */
 void UART1_DMA_TX_IRQHandler(void) {
   HAL_DMA_IRQHandler(UART_Handler.hdmatx);
-  xSemaphoreGiveFromISR((xSemaphoreHandle) USART1_Semaphore, (uint32_t*)&Testing_Task);
+  xSemaphoreGiveFromISR((xSemaphoreHandle) USART1_Semaphore, (uint32_t*)&Audio_Task);
 
 }
 
 
 uint8_t esp_send(uint8_t* send_String) {
+	debug_printf("Sending %s\n", send_String);
 	int i;
 	if (USART1_Semaphore != NULL) {
 		if( xSemaphoreTake( USART1_Semaphore, ( TickType_t ) 1000 ) == pdTRUE ) {
@@ -445,6 +446,11 @@ void handle_RSSI_Data(uint8_t node, uint8_t* data_String,  uint8_t* raw_data) {
 
 //############################ HELPER FUNCTIONS ###############################
 
+void Wifi_sendtoclient(uint8_t* data, int length){
+	if(client_Pipe != -1){
+		Wifi_senddata(client_Pipe, data, length);
+	}
+}
 
 void waitForPassed(int timeout){
   while(!lastTaskPassed && --timeout){
