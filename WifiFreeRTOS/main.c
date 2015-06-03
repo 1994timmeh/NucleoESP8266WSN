@@ -44,7 +44,7 @@ DMA_HandleTypeDef DMAHandle2;
 #define AUDIO_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
 
 #define TX_PRIORITY					( tskIDLE_PRIORITY + 1 )
-#define TX_STACK_SIZE		( configMINIMAL_STACK_SIZE * 14 )
+#define TX_STACK_SIZE		( configMINIMAL_STACK_SIZE * 15 )
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -64,6 +64,8 @@ SemaphoreHandle_t esp_Semaphore;
 SemaphoreHandle_t processing_Semaphore;
 
 QueueHandle_t validDataQueue;
+
+TaskHandle_t AudioTaskHandle;
 
 
 /* Private function prototypes -----------------------------------------------*/
@@ -110,7 +112,7 @@ int main( void ) {
 	audioProcessingInit();
 
 	/* Start the task to flash the LED. */
-	xTaskCreate( (void *) &Audio_Task, (const signed char *) "AUD", AUDIO_STACK_SIZE, NULL, AUDIO_PRIORITY , NULL );
+	xTaskCreate( (void *) &Audio_Task, (const signed char *) "AUD", AUDIO_STACK_SIZE, NULL, AUDIO_PRIORITY , &AudioTaskHandle );
 	xTaskCreate( (void *) &TX_Task, (const signed char *) "TX", TX_STACK_SIZE, NULL, TX_PRIORITY, NULL );
 	//xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", TESTING_STACK_SIZE, NULL, TESTING_PRIORITY + 1, NULL );
 
@@ -141,13 +143,12 @@ int main( void ) {
 void Audio_Task( void ) {
 	validDataQueue = xQueueCreate(10, sizeof(struct frameResults));
 
+	vTaskSuspend(NULL);
 	for (;;) {
 		struct frameResults results;
 		if(xSemaphoreTake(processing_Semaphore, 100) == pdTRUE) {
 			audioProcessFrame(ready_data1, ready_data2, &results);
-			if(results.validFrame == 1){
-				xQueueSendToBack(validDataQueue, (void *)&results, 1);
-			}
+			xQueueSendToBack(validDataQueue, (void *)&results, 1);
 
 		}
 	}
@@ -160,7 +161,7 @@ void Audio_Task( void ) {
  */
 void TX_Task( void ){
 	char SSID[50];
-	char data[500];
+	char data[100];
 	int reading_count = 0, string_len = 0;
 
 	data[0] = '\0';
@@ -176,13 +177,15 @@ void TX_Task( void ){
 	Wifi_get_AP_IP();
 	debug_printf("Compelted Init\n");
 
+	vTaskResume(AudioTaskHandle);
+
 	for(;;){
 		struct frameResults results;
 		if (xQueueReceive( validDataQueue, &results, 100) && client_Pipe != -1) {
 			BRD_LEDOn();
 
-			if(reading_count < 25){
-				string_len = sprintf(data, "%s{%d, %d}", data, results.maxBin, (int)(results.maxValue));
+			if(reading_count < 8){
+				string_len = sprintf(data, "%s{%d, %d, %d}", data, results.validFrame, results.maxBin, (int)(results.maxValue));
 				reading_count++;
 			} else {
 				//debug_printf("Sending: %s %d\n", data, string_len);

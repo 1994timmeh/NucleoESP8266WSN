@@ -192,11 +192,11 @@ void dma_Init(void) {
  * Task for processing UART data and adding new data to a data queue
  */
 void UART_Processor( void ){
-  char new_data[100];
+  char new_data[300];
 
   for(;;){
       if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
-        //debug_printf("LINE RX: %s\n", new_data);
+        debug_printf("LINE RX: %s\n", new_data);
         //We have new data analyze it
         if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
           BRD_LEDToggle();
@@ -276,7 +276,7 @@ uint8_t esp_send(uint8_t* send_String) {
 	int i;
 	if (USART1_Semaphore != NULL) {
 		if( xSemaphoreTake( USART1_Semaphore, ( TickType_t ) 1000 ) == pdTRUE ) {
-			uint8_t l = strlen(send_String);
+			int l = strlen(send_String);
 			memcpy(uart_tx_buffer, send_String,  l);
 			if (HAL_UART_Transmit_DMA(&UART_Handler, (uint8_t*)uart_tx_buffer, l) != HAL_OK) {
 				return 0;
@@ -734,7 +734,7 @@ void Wifi_senddata(uint8_t pipe_no, const char* data, int length){
 	if (esp_Semaphore != NULL) {
 			if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
 				  char command[50];
-				  char send_data[500];
+				  char send_data[200];
 				  char line_break[3] = "\n\r\0";
 				//  char tmp[20];
 				//
