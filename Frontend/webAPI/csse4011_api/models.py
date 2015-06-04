@@ -11,5 +11,13 @@ class Signal(models.Model):
 	Angle = models.FloatField();
 	Intensity = models.FloatField();
 	Timestamp = models.BigIntegerField();
+	
+	
+class CorrMax(models.Model):
+	Node_ID = models.SmallIntegerField();
+	MaxBin = models.FloatField();
+	MaxValue = models.FloatField();
+	Timestamp = models.BigIntegerField();
+
 
 

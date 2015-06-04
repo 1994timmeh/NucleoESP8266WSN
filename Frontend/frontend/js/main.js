@@ -1,13 +1,16 @@
-$( document ).ready(getNodes);
+$( document ).ready(function() {
+	getNodes();
+	getSignals(0);
+});
 
 var nodes = new Array();
+var signals = new Array();
 
 
 
 function getNodes() {
 	$.getJSON( "http://127.0.0.1:8000/csse4011_api/Nodes/", addNodes);
 }
-
 
 function addNodes(data) {
 
@@ -23,9 +26,36 @@ function addNodes(data) {
 		console.log(debugString);
 	});
 	
-
+	console.log(nodes.length + " nodes added");
 	loadMap();
 }
+
+
+function getSignals(timestamp) {
+	$.getJSON( "http://127.0.0.1:8000/csse4011_api/Signals/" + timestamp + "/", addSignals);
+}
+
+function addSignals(data) {
+	$.each( data, function( key, val ) {
+		var signal = val.fields;
+		signals.push(signal);
+		var debugString = "Signal added - Node_ID: " +
+			signal.Node_ID +
+			"   Angle: " +
+			signal.Angle +
+			"   Intensity: " +
+			signal.Intensity +
+			"   Timestamp: " +
+			signal.Timestamp;
+		console.log(debugString);
+	});
+	console.log(signals.length + " signals added");
+	//showSignals();
+}
+
+
+
+
 
 
 function loadMap() {
