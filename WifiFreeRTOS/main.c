@@ -141,15 +141,12 @@ int main( void ) {
   * @retval None
   */
 void Audio_Task( void ) {
-	validDataQueue = xQueueCreate(10, sizeof(struct frameResults));
-
 	vTaskSuspend(NULL);
 	for (;;) {
 		struct frameResults results;
 		if(xSemaphoreTake(processing_Semaphore, 100) == pdTRUE) {
 			audioProcessFrame(ready_data1, ready_data2, &results);
 			xQueueSendToBack(validDataQueue, (void *)&results, 1);
-
 		}
 	}
 }
@@ -160,8 +157,9 @@ void Audio_Task( void ) {
  * Priority
  */
 void TX_Task( void ){
+	validDataQueue = xQueueCreate(100, sizeof(struct frameResults));
 	char SSID[50];
-	char data[100];
+	char data[300];
 	int reading_count = 0, string_len = 0;
 
 	data[0] = '\0';
@@ -184,18 +182,17 @@ void TX_Task( void ){
 		if (xQueueReceive( validDataQueue, &results, 100) && client_Pipe != -1) {
 			BRD_LEDOn();
 
-			if(reading_count < 8){
+			if(reading_count < 10){
 				string_len = sprintf(data, "%s{%d, %d, %d}", data, results.validFrame, results.maxBin, (int)(results.maxValue));
 				reading_count++;
 			} else {
 				//debug_printf("Sending: %s %d\n", data, string_len);
 				Wifi_sendtoclient(data, string_len);
 				reading_count = 0;
-				data[0] = '\0';
+				memset(data, 0, 300);
 			}
 			BRD_LEDOff();
 		}
-		vTaskDelay(100);
 	}
 }
 
