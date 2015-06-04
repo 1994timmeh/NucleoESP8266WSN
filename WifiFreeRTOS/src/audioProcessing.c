@@ -66,8 +66,7 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	uint8_t i, consecutiveFrame;
 	float32_t maxValue;
 	uint32_t maxBin;
-
-	float32_t power, mean, variance, stdDev, skew, kurtosis;
+	float32_t temp;
 
 #ifdef DEBUG_PINS
 	HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, 0x01);
@@ -97,8 +96,12 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	arm_rfft_fast_f32(&fftStructures, combinedData, micOneFFTdata, ifftFlag);
 
 	// Find maximum  correlation points
-	arm_max_f32(micOneFFTdata, FFT_LENGTH, &maxValue, &maxBin);
-	maxBin = (AUDIO_FRAME_LENGTH - 1) - maxBin;
+	arm_max_f32(micOneFFTdata, FFT_LENGTH, &maxValue, &(maxBin));
+	results->maxBin[0] = maxBin;
+	for (i = 0; i < NUM_FREQUENCIES; i++) {
+		arm_max_f32(micOneFFTdata, FFT_LENGTH, &temp, &(results->maxBin[i]));
+		results->maxBin[i] = (AUDIO_FRAME_LENGTH - 1) - results->maxBin[i];
+	}
 
 	// Compare maximum bin to previous bins
 	consecutiveFrame = 1;
@@ -146,7 +149,6 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 
 	// Populate remaining result structure
 	results->validFrame = consecutiveFrame;
-	results->maxBin = maxBin;
 	results->maxValue = maxValue;
 
 	return;

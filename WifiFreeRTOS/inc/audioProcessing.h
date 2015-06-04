@@ -10,10 +10,11 @@
 #define SLIDING_WINDOW_LENGTH	3
 #define SLIDING_WINDOW_SHIFT	3
 
+#define NUM_FREQUENCIES			5
 
 struct frameResults {
 	uint8_t validFrame;
-	int32_t maxBin;
+	int32_t maxBin[NUM_FREQUENCIES];
 	float32_t maxValue;
 	float32_t power;
 	float32_t mean;
