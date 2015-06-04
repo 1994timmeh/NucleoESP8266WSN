@@ -113,7 +113,7 @@ int main( void ) {
 
 	/* Start the task to flash the LED. */
 	xTaskCreate( (void *) &Audio_Task, (const signed char *) "AUD", AUDIO_STACK_SIZE, NULL, AUDIO_PRIORITY , &AudioTaskHandle );
-	xTaskCreate( (void *) &TX_Task, (const signed char *) "TX", TX_STACK_SIZE, NULL, TX_PRIORITY, NULL );
+	//xTaskCreate( (void *) &TX_Task, (const signed char *) "TX", TX_STACK_SIZE, NULL, TX_PRIORITY, NULL );
 	//xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", TESTING_STACK_SIZE, NULL, TESTING_PRIORITY + 1, NULL );
 
 	/* Start the scheduler.
@@ -143,7 +143,7 @@ int main( void ) {
 void Audio_Task( void ) {
 	validDataQueue = xQueueCreate(10, sizeof(struct frameResults));
 
-	vTaskSuspend(NULL);
+	//vTaskSuspend(NULL);
 	for (;;) {
 		struct frameResults results;
 		if(xSemaphoreTake(processing_Semaphore, 100) == pdTRUE) {
@@ -549,7 +549,6 @@ void DMACompleteISR2( void ){
   * @retval None
   */
 void Hardware_init( void ) {
-
 	portDISABLE_INTERRUPTS();	//Disable interrupts
 
 	BRD_LEDInit();				//Initialise Blue LED
@@ -571,6 +570,7 @@ void vApplicationTickHook( void ) {
 /**
   * @brief  Idle Application Task
   * @param  None
+
   * @retval None
   */
 void vApplicationIdleHook( void ) {

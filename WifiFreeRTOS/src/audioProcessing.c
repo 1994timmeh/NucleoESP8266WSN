@@ -1,9 +1,14 @@
 
 
 #include "audioProcessing.h"
+#include "audioStatistics.h"
 #include "arm_const_structs.h"
 
-#define AUDIODEBUG
+#include "board.h"
+#include "stm32f4xx_hal_conf.h"
+
+//#define AUDIODEBUG
+#define DEBUG_PINS
 
 void arm_copy_complex(float32_t* pSrc, float32_t* pDst, uint32_t blockSize);
 
@@ -22,17 +27,51 @@ arm_rfft_fast_instance_f32 fftStructures;
 int32_t pastBins[SLIDING_WINDOW_LENGTH];
 
 void audioProcessingInit(void) {
+	GPIO_InitTypeDef  GPIO_InitStructure;
 	uint8_t i;
 	arm_rfft_fast_init_f32(&fftStructures, FFT_LENGTH);
 	for (i = 0; i < SLIDING_WINDOW_LENGTH; i++) {
 		pastBins[i] = 2*AUDIO_FRAME_LENGTH;
 	}
+
+
+	#ifdef DEBUG_PINS
+
+	/* Enable the D8 & D9 Clock */
+  	__BRD_D8_GPIO_CLK();
+	__BRD_D9_GPIO_CLK();
+
+  	/* Configure the D8 pin as an output */
+	GPIO_InitStructure.Pin = BRD_D8_PIN;				//Pin
+  	GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;		//Output Mode
+  	GPIO_InitStructure.Pull = GPIO_PULLDOWN;			//Enable Pull up, down or no pull resister
+  	GPIO_InitStructure.Speed = GPIO_SPEED_FAST;			//Pin latency
+  	HAL_GPIO_Init(BRD_D8_GPIO_PORT, &GPIO_InitStructure);	//Initialise Pin
+
+  	/* Configure the D9 pin as an output */
+	GPIO_InitStructure.Pin = BRD_D9_PIN;				//Pin
+  	GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;		//Output Mode
+  	GPIO_InitStructure.Pull = GPIO_PULLDOWN;			//Enable Pull up, down or no pull resister
+  	GPIO_InitStructure.Speed = GPIO_SPEED_FAST;			//Pin latency
+  	HAL_GPIO_Init(BRD_D9_GPIO_PORT, &GPIO_InitStructure);	//Initialise Pin
+
+	HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, 0x00);
+	HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x00);
+
+	#endif /* DEBUG_PINS */
+
 }
 
 void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct frameResults* results) {
 	uint8_t i, consecutiveFrame;
 	float32_t maxValue;
 	uint32_t maxBin;
+
+	float32_t power, mean, variance, stdDev, skew, kurtosis;
+
+#ifdef DEBUG_PINS
+	HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, 0x01);
+#endif /* DEBUG PINS */
 
 	// Initialise both data sequences as 0.0
 	arm_fill_f32(0.0,  micOneFFTdata, FFT_LENGTH);
@@ -77,10 +116,11 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	}
 	pastBins[0] = maxBin;
 
-	// Populate result structure
-	results->validFrame = consecutiveFrame;
-	results->maxValue = maxValue;
-	results->maxBin = maxBin;
+#ifdef DEBUG_PINS
+	HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, 0x00);
+	HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x01);
+#endif /* DEBUG PINS */
+
 
 	#ifdef AUDIODEBUG
 			//debug_printf("validFrame: %c ", consecutiveFrame ? 'Y' : 'N');
@@ -89,6 +129,27 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 			debug_printf("maxBin: %d\n", (int) maxBin);
 		}
 	#endif
+
+	arm_cmplx_mag_f32(combinedData, micOneFFTdata, FFT_LENGTH);	
+
+	audioStatsPower(micOneFFTdata, FFT_LENGTH, &(results->power));
+	audioStatsMean(micOneFFTdata, FFT_LENGTH, &(results->mean));
+	audioStatsVariance(micOneFFTdata, FFT_LENGTH, &(results->variance));
+
+	audioStatsStdDev(results->variance, &(results->stdDev));
+	audioStatsSkewness(micOneFFTdata, results->mean, results->stdDev, FFT_LENGTH, &(results->skew));
+	audioStatsKurtosis(micOneFFTdata, results->mean, results->stdDev, FFT_LENGTH, &(results->kurtosis));
+
+#ifdef DEBUG_PINS
+	HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x00);
+#endif /* DEBUG PINS */
+
+	// Populate remaining result structure
+	results->validFrame = consecutiveFrame;
+	results->maxBin = maxBin;
+	results->maxValue = maxValue;
+
+	return;
 }
 
 void arm_copy_complex(float32_t* pSrc, float32_t* pDst, uint32_t blockSize) {

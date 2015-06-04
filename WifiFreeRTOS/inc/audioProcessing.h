@@ -13,8 +13,14 @@
 
 struct frameResults {
 	uint8_t validFrame;
-	float maxValue;
 	int32_t maxBin;
+	float32_t maxValue;
+	float32_t power;
+	float32_t mean;
+	float32_t variance;
+	float32_t stdDev;
+	float32_t skew;
+	float32_t kurtosis;
 };
 
 void audioProcessingInit(void);
