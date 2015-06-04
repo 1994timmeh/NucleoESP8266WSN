@@ -40,7 +40,7 @@ def tcp_client_thread():
 	# Create a TCP/IP socket
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-	server_address = ('192.168.2.16', 8888)
+	server_address = ('192.168.3.1', 8888)
 	sock.connect(server_address)
 
 	try:
