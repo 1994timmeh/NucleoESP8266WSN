@@ -5,10 +5,9 @@ $( document ).ready(function() {
 
 var nodes = new Array();
 var signals = new Array();
+var refLong = 0;
+var refLat = 0;
 
-var proj = new MercatorProjection();
-
-//getCorners(google.maps.LatLng(nodes[0].latitude, nodes[0].longitude),mapZoom,640,640);
 
 function getNodes() {
 	$.getJSON( "http://127.0.0.1:8000/csse4011_api/Nodes/", addNodes);
@@ -74,6 +73,7 @@ function loadMap() {
 							longitude +
 							"&zoom="+ mapZoom +"&scale="+ mapScale +"&size=" + width + "x" + height + "\"></img>";
 	});
+	
 	/* $.each(nodes, function() {
 		latlng = getPixel(latitude, longitude);
 		$("body").append(
