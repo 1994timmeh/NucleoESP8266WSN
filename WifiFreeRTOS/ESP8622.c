@@ -31,11 +31,11 @@ extern SemaphoreHandle_t esp_Semaphore;
 volatile int lastTaskPassed = FALSE;
 volatile int prompt = FALSE;
 
-char line_buffer[100];
+char line_buffer[500];
 uint8_t line_buffer_index = 0;
 
 char ip_addr_string[20];
-char uart_buffer[100];
+char uart_buffer[500];
 
 uint8_t* uart_tx_buffer;
 
@@ -52,39 +52,17 @@ extern void Audio_Task( void );
   * @author Michael Thoreau
   */
 void 	ESP8622_init( uint32_t baud ){
-  GPIO_InitTypeDef GPIO_serial;
+	GPIO_InitTypeDef GPIO_serial;
 
-  __USART6_CLK_ENABLE();
-  __BRD_D10_GPIO_CLK();
-  __BRD_D2_GPIO_CLK();
-  __BRD_D3_GPIO_CLK();
-  __BRD_D4_GPIO_CLK();
-  __BRD_D5_GPIO_CLK();
-  __BRD_D6_GPIO_CLK();
-  __BRD_D1_GPIO_CLK();
-  __BRD_D0_GPIO_CLK();
-
-//  GPIO_serial.Pin = BRD_D3_PIN;
-//  GPIO_serial.Mode = GPIO_MODE_OUTPUT_PP;				             	//Enable alternate mode setting
-//  GPIO_serial.Pull = GPIO_PULLDOWN;
-//  GPIO_serial.Speed = GPIO_SPEED_HIGH;
-//  HAL_GPIO_Init(BRD_D3_GPIO_PORT, &GPIO_serial);
-//
-//  GPIO_serial.Pin = BRD_D4_PIN;
-//  HAL_GPIO_Init(BRD_D4_GPIO_PORT, &GPIO_serial);
-//
-//  GPIO_serial.Pin = BRD_D5_PIN;
-//  HAL_GPIO_Init(BRD_D5_GPIO_PORT, &GPIO_serial);
-//
-//  GPIO_serial.Pin = BRD_D6_PIN;
-//  HAL_GPIO_Init(BRD_D6_GPIO_PORT, &GPIO_serial);
-//
-//  GPIO_serial.Pin = BRD_D7_PIN;
-//  HAL_GPIO_Init(BRD_D7_GPIO_PORT, &GPIO_serial);
-//
-//  GPIO_serial.Pin = BRD_D8_PIN;
-//  HAL_GPIO_Init(BRD_D8_GPIO_PORT, &GPIO_serial);
-
+	__USART6_CLK_ENABLE();
+	__BRD_D10_GPIO_CLK();
+	__BRD_D2_GPIO_CLK();
+	__BRD_D3_GPIO_CLK();
+	__BRD_D4_GPIO_CLK();
+	__BRD_D5_GPIO_CLK();
+	__BRD_D6_GPIO_CLK();
+	__BRD_D1_GPIO_CLK();
+	__BRD_D0_GPIO_CLK();
 
 	/* Configure the D0 as the RX pin for USART6 */
 	GPIO_serial.Pin = BRD_D0_PIN;
@@ -102,41 +80,38 @@ void 	ESP8622_init( uint32_t baud ){
 	GPIO_serial.Alternate = GPIO_AF8_USART6;			//Set alternate setting to USART 6
 	HAL_GPIO_Init(BRD_D1_GPIO_PORT, &GPIO_serial);
 
-  UART_Handler.Instance          = USART6;
-  UART_Handler.Init.BaudRate     = baud;
-  UART_Handler.Init.WordLength   = UART_WORDLENGTH_8B;
-  UART_Handler.Init.StopBits     = UART_STOPBITS_1;
-  UART_Handler.Init.Parity       = UART_PARITY_NONE;
-  UART_Handler.Init.HwFlowCtl    = UART_HWCONTROL_NONE;
-  UART_Handler.Init.Mode         = UART_MODE_TX_RX;
-  UART_Handler.Init.OverSampling = UART_OVERSAMPLING_16;
+	UART_Handler.Instance          = USART6;
+	UART_Handler.Init.BaudRate     = baud;
+	UART_Handler.Init.WordLength   = UART_WORDLENGTH_8B;
+	UART_Handler.Init.StopBits     = UART_STOPBITS_1;
+	UART_Handler.Init.Parity       = UART_PARITY_NONE;
+	UART_Handler.Init.HwFlowCtl    = UART_HWCONTROL_NONE;
+	UART_Handler.Init.Mode         = UART_MODE_TX_RX;
+	UART_Handler.Init.OverSampling = UART_OVERSAMPLING_16;
 
-  HAL_NVIC_SetPriority(USART6_IRQn, 10, 0);
-  NVIC_SetVector(USART6_IRQn, &UART1_IRQHandler);
-  HAL_NVIC_EnableIRQ(USART6_IRQn);
+	HAL_NVIC_SetPriority(USART6_IRQn, 10, 0);
+	NVIC_SetVector(USART6_IRQn, &UART1_IRQHandler);
+	HAL_NVIC_EnableIRQ(USART6_IRQn);
 
-  HAL_UART_Init(&UART_Handler);
+	HAL_UART_Init(&UART_Handler);
 
-  dma_Init();
+	dma_Init();
 
-  /*  Enable RXNE interrupt on USART_1 */
-  if (HAL_UART_Receive_IT((UART_HandleTypeDef*)&UART_Handler, (uint8_t *)uart_buffer, 100) != HAL_OK) {
+	/*  Enable RXNE interrupt on USART_1 */
+	if (HAL_UART_Receive_IT((UART_HandleTypeDef*)&UART_Handler, (uint8_t *)uart_buffer, 500) != HAL_OK) {
 	  debug_printf("UART Interrupt init FAIL");
-  }
+	}
 
-  xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", WIFI_STACK_SIZE, NULL, WIFI_PRIORITY, NULL );
+	xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", WIFI_STACK_SIZE, NULL, WIFI_PRIORITY, NULL );
 
-  Data_Queue = xQueueCreate(20, sizeof(char[100]));
-  Access_Points = pvPortMalloc(sizeof(APs));
-  Access_Points->size = 0;
-  Access_Points->HEAD = NULL;
-  Access_Points->TAIL = NULL;
+	Data_Queue = xQueueCreate(20, sizeof(char[100]));
+	Access_Points = pvPortMalloc(sizeof(APs));
+	Access_Points->size = 0;
+	Access_Points->HEAD = NULL;
+	Access_Points->TAIL = NULL;
 }
 
 void dma_Init(void) {
-
-
-
 	USART1_Semaphore = xSemaphoreCreateMutex();
 	  /*##-1- Enable peripherals and GPIO Clocks #################################*/
 
@@ -177,7 +152,7 @@ void dma_Init(void) {
 	  NVIC_SetVector(DMA2_Stream7_IRQn, (uint32_t)&UART1_DMA_TX_IRQHandler);
 
 	  /* initialise UART_Buffer	*/
-	  uart_tx_buffer = pvPortMalloc(sizeof(uint8_t)* 100);
+	  uart_tx_buffer = pvPortMalloc(sizeof(uint8_t)* 500);
 	  //HAL_UART_Transmit(&UART_Handler, "asd", 3, 10);
 	  //esp_send("test");
 
@@ -192,7 +167,7 @@ void dma_Init(void) {
  * Task for processing UART data and adding new data to a data queue
  */
 void UART_Processor( void ){
-  char new_data[300];
+  char new_data[500];
 
   for(;;){
       if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
@@ -250,7 +225,7 @@ void UART1_IRQHandler(void)
     	} else if (index != 0) {
     			xQueueSendToBackFromISR(Data_Queue, line_buffer, ( BaseType_t* ) 4 );
     			// clear line buffer
-    			memset(line_buffer, 0, 100);
+    			memset(line_buffer, 0, 500);
     			line_buffer_index = 0;
     	}
     } else {	// cleanup other flags
@@ -293,15 +268,6 @@ uint8_t esp_send(uint8_t* send_String) {
 	}
 	return 0;
 }
-
-//void UART_Tx_Task( void ) {
-//	for(;;){
-//	      if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
-//
-//
-//
-//	vTaskDelay(10);
-//}
 
 void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:45:a2:ea:92",6)
 	 char zero = 0;
@@ -734,7 +700,7 @@ void Wifi_senddata(uint8_t pipe_no, const char* data, int length){
 	if (esp_Semaphore != NULL) {
 			if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
 				  char command[50];
-				  char send_data[200];
+				  char send_data[500];
 				  char line_break[3] = "\n\r\0";
 				//  char tmp[20];
 				//
