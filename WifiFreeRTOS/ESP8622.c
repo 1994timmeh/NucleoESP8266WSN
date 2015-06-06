@@ -14,8 +14,8 @@
 #define FALSE 0
 #define NODE_ID 1
 
-#define USART_TX_TASK_PRIORITY					( tskIDLE_PRIORITY + 4 )
-#define USART_TX_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 15 )
+#define USART_TX_TASK_PRIORITY					( tskIDLE_PRIORITY + 3 )
+#define USART_TX_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 10 )
 
 UART_HandleTypeDef UART_Handler;
 DMA_HandleTypeDef hdma_tx;
@@ -52,7 +52,7 @@ extern void Audio_Task( void );
   * @author Timmy Hadwen
   * @author Michael Thoreau
   */
-void 	ESP8622_init( uint32_t baud ){
+void ESP8622_init( uint32_t baud ){
 	GPIO_InitTypeDef GPIO_serial;
 
 	__USART6_CLK_ENABLE();
@@ -105,7 +105,7 @@ void 	ESP8622_init( uint32_t baud ){
 
 	xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", WIFI_STACK_SIZE, NULL, WIFI_PRIORITY, NULL );
 
-	Data_Queue = xQueueCreate(20, sizeof(char[100]));
+	Data_Queue = xQueueCreate(5, sizeof(char[500]));
 	Access_Points = pvPortMalloc(sizeof(APs));
 	Access_Points->size = 0;
 	Access_Points->HEAD = NULL;
@@ -172,7 +172,7 @@ void UART_Processor( void ){
 
   for(;;){
       if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
-        debug_printf("LINE RX: %s\n", new_data);
+        //debug_printf("LINE RX: %s\n", new_data);
         //We have new data analyze it
         if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
           BRD_LEDToggle();
@@ -199,7 +199,7 @@ void UART_Processor( void ){
   				handle_Access_Point(new_data);
   	    }
       }
-      vTaskDelay(1);
+      vTaskDelay(10);
   }
 }
 
@@ -222,7 +222,7 @@ void UART1_IRQHandler(void)
       //
   	  //add to queue
 
-    	if (c != '\n' && c != '\r') {
+    	if (c != '\n' && c != '\r' && line_buffer_index < 499) {
     		line_buffer[line_buffer_index] = c;
     		line_buffer_index++;
     	} else if (index != 0) {
@@ -246,7 +246,6 @@ void UART1_IRQHandler(void)
 void UART1_DMA_TX_IRQHandler(void) {
   HAL_DMA_IRQHandler(UART_Handler.hdmatx);
   xSemaphoreGiveFromISR((xSemaphoreHandle) USART1_Semaphore, (uint32_t*)&Audio_Task);
-
 }
 
 
@@ -447,11 +446,17 @@ void waitForSendOK(int timeout){
 	sendOK = FALSE;
 }
 
-void waitForPrompt(){
-  while(!prompt){
-    vTaskDelay(100);
-  }
-  prompt = FALSE;
+void waitForPrompt(int timeout){
+	while(!prompt && timeout--){
+	vTaskDelay(100);
+	}
+	if(timeout == 0){
+		debug_printf("SEND FAILED.\n\n");
+	} else {
+		debug_printf("SEND SUCCEEDED.\n\n");
+	}
+
+	prompt = FALSE;
 }
 
 /* Resets the wifi module */
@@ -729,7 +734,7 @@ void Wifi_senddata(uint8_t pipe_no, const char* data, int length){
 			//HAL_UART_Transmit(&UART_Handler, send_data, len, 10);
 			vTaskDelay(50);
 			esp_send(send_data);
-			waitForSendOK(10000);
+			waitForSendOK(2000);
 			xSemaphoreGive(esp_Semaphore);
 		}
 	}

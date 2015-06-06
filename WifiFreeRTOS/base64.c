@@ -60,12 +60,12 @@ int b64_encode(char *clrstr, char *b64dst, int pre_length) {
     int encoded_length = 0;
 
     b64dst[0] = '\0';
-    debug_printf("Encoding %d bytes: ", pre_length);
+    //debug_printf("Encoding %d bytes: ", pre_length);
     while(j < pre_length) {
         len = 0;
         for(i=0; i<3; i++) {
             in[i] = (unsigned char) clrstr[j];
-            debug_printf("0x%02X ", clrstr[j]);
+           // debug_printf("0x%02X ", clrstr[j]);
             if(j < pre_length) {
                 len++; j++;
             }
