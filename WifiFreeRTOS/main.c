@@ -41,7 +41,7 @@ DMA_HandleTypeDef DMAHandle2;
 
 /* Private define ------------------------------------------------------------*/
 #define BUFFER_SIZE 256
-#define AUDIO_PRIORITY					( tskIDLE_PRIORITY + 4 )
+#define AUDIO_PRIORITY					( tskIDLE_PRIORITY + 2 )
 #define AUDIO_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
 
 #define TX_PRIORITY					( tskIDLE_PRIORITY + 2 )
@@ -144,6 +144,7 @@ float32_t test2[] = {0.63577,1.0957,-1.7048,-0.43299,-0.35294,-0.0011875,0.46182
   * @retval None
   */
 void Audio_Task( void ) {
+	vTaskSuspend(NULL);
 	for (;;) {
 		struct frameResults results;
 		if(xSemaphoreTake(processing_Semaphore, 1) == pdTRUE) {
@@ -151,8 +152,6 @@ void Audio_Task( void ) {
 			if(results.validFrame){
 				if(xQueueSendToBack(validDataQueue, (void *)&results, 1) == pdFALSE){
 					debug_printf("validFrame queue is full\n");
-					//The queue is full so delay for a second to let it subside (testing only)
-					vTaskDelay(1000);
 				}
 			}
 		}
@@ -186,15 +185,14 @@ void TX_Task( void ){
 	for(;;) {
 		struct frameResults results;
 		if (xQueueReceive( validDataQueue, &results, 1) && (client_Pipe != -1)) {
-			if(string_len < 200){ //65 bytes for an encoded packet + 5 buffer
+			if(string_len < 350){ //65 bytes for an encoded packet + 5 buffer len = 4(n/3)
 				serialize_results(results, &(data[string_len]));
 				string_len += 50;
 				reading_count++;
 			} else {
-				debug_printf("Sending %d readings as payload %d.\n", reading_count, seq++);
 				int len = b64_encode(data, b64_data, string_len);
 				Wifi_sendtoclient(b64_data, len);
-				vTaskDelay(100);
+				debug_printf("Sending %d readings as payload %d of length %d.\n", reading_count, seq++, len);
 				BRD_LEDToggle();
 
 				//Clean up for next time

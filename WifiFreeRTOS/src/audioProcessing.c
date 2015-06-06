@@ -7,7 +7,7 @@
 #include "board.h"
 #include "stm32f4xx_hal_conf.h"
 
-//#define AUDIODEBUG
+#define AUDIODEBUG
 #define DEBUG_PINS
 
 void arm_copy_complex(float32_t* pSrc, float32_t* pDst, uint32_t blockSize);
@@ -124,14 +124,6 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x01);
 #endif /* DEBUG PINS */
 
-
-	#ifdef AUDIODEBUG
-		if(consecutiveFrame){
-			debug_printf("maxValue: %d ", (int) (maxValue));
-			debug_printf("maxBin: %d\n", (int) maxBin);
-		}
-	#endif
-
 	arm_cmplx_mag_f32(combinedData, micOneFFTdata, FFT_LENGTH);	
 
 	audioStatsPower(micOneFFTdata, FFT_LENGTH, &(results->power));
@@ -149,6 +141,14 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	// Populate remaining result structure
 	results->validFrame = consecutiveFrame;
 	results->maxValue = maxValue;
+
+#ifdef AUDIODEBUG
+	if(consecutiveFrame){
+		debug_printf("maxValue: %d ", (int) (maxValue));
+		debug_printf("maxBin: %d\n", (int) maxBin);
+	}
+
+#endif
 
 	return;
 }
@@ -276,6 +276,8 @@ void serialize_results(struct frameResults results, uint8_t* x){
 	x[46] = (maxBin & 0x0000FF00) >> 8;
 	x[47] = (maxBin & 0x00FF0000) >> 16;
 	x[48] = (maxBin & 0xFF000000) >> 24;
+
+	x[49] = 0x00;
 
 //	int i = 0;
 //	for(;i<12;i++){
