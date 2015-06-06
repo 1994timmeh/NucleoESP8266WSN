@@ -25,6 +25,7 @@
 #include "queue.h"
 #include "semphr.h"
 #include "audioProcessing.h"
+#include "base64.h"
 
 #define NODE_ID 1
 
@@ -40,11 +41,11 @@ DMA_HandleTypeDef DMAHandle2;
 
 /* Private define ------------------------------------------------------------*/
 #define BUFFER_SIZE 256
-#define AUDIO_PRIORITY					( tskIDLE_PRIORITY + 2 )
+#define AUDIO_PRIORITY					( tskIDLE_PRIORITY + 1 )
 #define AUDIO_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
 
-#define TX_PRIORITY					( tskIDLE_PRIORITY + 1 )
-#define TX_STACK_SIZE		( configMINIMAL_STACK_SIZE * 15 )
+#define TX_PRIORITY					( tskIDLE_PRIORITY + 2 )
+#define TX_STACK_SIZE		( configMINIMAL_STACK_SIZE * 10 )
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -141,13 +142,19 @@ float32_t test2[] = {0.63577,1.0957,-1.7048,-0.43299,-0.35294,-0.0011875,0.46182
   * @retval None
   */
 void Audio_Task( void ) {
-	validDataQueue = xQueueCreate(10, sizeof(struct frameResults));
+	validDataQueue = xQueueCreate(50, sizeof(struct frameResults));
 
 	for (;;) {
 		struct frameResults results;
-		if(xSemaphoreTake(processing_Semaphore, 100) == pdTRUE) {
+		if(xSemaphoreTake(processing_Semaphore, 1) == pdTRUE) {
 			audioProcessFrame(ready_data1, ready_data2, &results);
-			xQueueSendToBack(validDataQueue, (void *)&results, 1);
+			if(results.validFrame){
+				if(xQueueSendToBack(validDataQueue, (void *)&results, 1) == pdFALSE){
+					debug_printf("Queues are overflowing\n");
+					//The queue is full so delay for a second to let it subside (testing only)
+					vTaskDelay(5000);
+				}
+			}
 		}
 	}
 }
@@ -159,18 +166,16 @@ void Audio_Task( void ) {
  */
 void TX_Task( void ){
 	char SSID[50];
-	char data[500];
+	unsigned char data[500];
+	unsigned char b64_data[500];
 	int reading_count = 0, string_len = 0;
 
 	ESP8622_init(230400);
-	debug_printf("I AM NODE %d\n\n", NODE_ID);
 	Wifi_setmode();
 	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
 	Wifi_setAP(SSID,"password", 5, 0);
 	Wifi_set_AP_IP("192.168.3.1");
 	Wifi_enserver();
-	Wifi_get_AP_IP();
-	debug_printf("Compelted Init\n");
 
 	memset(data, 0, 500);
 
@@ -178,21 +183,29 @@ void TX_Task( void ){
 
 	for(;;) {
 		struct frameResults results;
-		if (xQueueReceive( validDataQueue, &results, 100) && client_Pipe != -1) {
-			if(string_len < 450){
-				string_len = sprintf(data, "%s{%d, %d, %d}", data, results.validFrame, results.maxBin, (int)(results.maxValue));
+		if (xQueueReceive( validDataQueue, &results, 1) && (client_Pipe != -1)) {
+			if(string_len < 250 && reading_count < 1){
+				serialize_results(results, &(data[string_len]));
+				string_len += 49;
 				reading_count++;
 			} else {
-				//debug_printf("Sending: %s %d\n", data, string_len);
 				debug_printf("Sending %d readings.\n", reading_count);
-				Wifi_sendtoclient(data, string_len);
+				int len = b64_encode(data, b64_data, string_len);
+				debug_printf("Sending: %s %d %d\n", b64_data, string_len, len);
+				Wifi_sendtoclient(b64_data, len);
+				BRD_LEDToggle();
+
 				reading_count = 0;
 				string_len = 0;
 				memset(data, 0, 500);
+				memset(b64_data, 0, 500);
 			}
-			BRD_LEDToggle();
 		}
-		vTaskDelay(10);
+//
+//		char buffer[10] = "HELLO";
+//		char dest[20];
+//		int len = b64_encode(buffer, dest);
+//		debug_printf("HELLO ->Base64-> %s is %d long\n", dest, len);
 	}
 }
 

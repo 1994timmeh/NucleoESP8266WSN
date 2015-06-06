@@ -26,5 +26,6 @@ struct frameResults {
 
 void audioProcessingInit(void);
 void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct frameResults* results);
+void serialize_results(struct frameResults results, uint8_t* x);
 
 #endif

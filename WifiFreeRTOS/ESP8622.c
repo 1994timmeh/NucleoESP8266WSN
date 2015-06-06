@@ -29,6 +29,7 @@ extern SemaphoreHandle_t esp_Semaphore;
 
 
 volatile int lastTaskPassed = FALSE;
+volatile int sendOK = FALSE;
 volatile int prompt = FALSE;
 
 char line_buffer[500];
@@ -179,8 +180,10 @@ void UART_Processor( void ){
          // debug_printf("Data: %s\n", &(new_data[5]));
           handle_data(new_data+5);
 
-        } else if(strncmp(&(new_data[0]), "OK", 2) == 0 || strncmp(&(new_data[0]), "ready", 5) == 0
-    || strncmp(&(new_data[0]), "no change", 9) == 0 || strncmp(&(new_data[0]), "SEND OK", 7) == 0) {
+        } else if(strncmp(&(new_data[0]), "SEND OK", 7) == 0){
+			sendOK = TRUE;
+		} else if(strncmp(&(new_data[0]), "OK", 2) == 0 || strncmp(&(new_data[0]), "ready", 5) == 0
+    || strncmp(&(new_data[0]), "no change", 9) == 0) {
           //Set the last task passed flag
           lastTaskPassed = TRUE;
 
@@ -428,6 +431,20 @@ void waitForPassed(int timeout){
   }
 
   lastTaskPassed = FALSE;
+}
+
+void waitForSendOK(int timeout){
+	while(!sendOK && timeout--){
+		vTaskDelay(1);
+	}
+
+	if(timeout == 0){
+		debug_printf("SEND FAILED.\n\n");
+	} else {
+		debug_printf("SEND SUCCEEDED.\n\n");
+	}
+
+	sendOK = FALSE;
 }
 
 void waitForPrompt(){
@@ -698,29 +715,24 @@ void Wifi_connectTCP( char* ip, int port){
 
 void Wifi_senddata(uint8_t pipe_no, const char* data, int length){
 	if (esp_Semaphore != NULL) {
-			if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
-				  char command[50];
-				  char send_data[500];
-				  char line_break[3] = "\n\r\0";
-				//  char tmp[20];
-				//
-				//  int len = sprintf(tmp, WIFI_CMD_SEND_DATA, length);
-				  int len = sprintf(command, WIFI_CMD_SEND_DATA, pipe_no, length);
+		if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
+			char command[50];
+			char send_data[500];
+			char line_break[3] = "\n\r\0";
 
-				  //HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
-				  esp_send(command);
-				  vTaskDelay(50); //TODO Check this delay isn't too short
+			int len = sprintf(command, WIFI_CMD_SEND_DATA, pipe_no, length);
+			esp_send(command);
+			vTaskDelay(50);
 
-
-				 memcpy(send_data, data, length);
-				 memcpy(send_data+length, line_break, 3);
-				  //HAL_UART_Transmit(&UART_Handler, send_data, len, 10);
-				 vTaskDelay(50);
-				  esp_send(send_data);
-				  waitForPassed(5000);
-				 xSemaphoreGive(esp_Semaphore);
-			}
+			memcpy(send_data, data, length);
+			memcpy(send_data+length, line_break, 3);
+			//HAL_UART_Transmit(&UART_Handler, send_data, len, 10);
+			vTaskDelay(50);
+			esp_send(send_data);
+			waitForSendOK(10000);
+			xSemaphoreGive(esp_Semaphore);
 		}
+	}
 }
 
 void Wifi_timesync(){

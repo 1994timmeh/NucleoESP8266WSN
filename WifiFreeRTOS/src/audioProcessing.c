@@ -7,7 +7,7 @@
 #include "board.h"
 #include "stm32f4xx_hal_conf.h"
 
-#define AUDIODEBUG
+//#define AUDIODEBUG
 #define DEBUG_PINS
 
 void arm_copy_complex(float32_t* pSrc, float32_t* pDst, uint32_t blockSize);
@@ -190,3 +190,96 @@ void print_results(struct frameResults results){
 	debug_printf("maxValue: %f\n", results.maxValue);
 	debug_printf("maxBin: %d\n\n", results.maxBin);
 }
+
+//struct frameResults {
+//	uint8_t validFrame;
+//	int32_t maxBin[NUM_FREQUENCIES];
+//	float32_t maxValue;
+//	float32_t power;
+//	float32_t mean;
+//	float32_t variance;
+//	float32_t stdDev;
+//	float32_t skew;
+//	float32_t kurtosis;
+//};
+void serialize_results(struct frameResults results, uint8_t* x){
+	x[0] = (uint8_t)results.validFrame;
+
+	uint32_t maxBin = (uint32_t)results.maxBin[0];
+	x[1] = (maxBin & 0x000000FF);
+	x[2] = (maxBin & 0x0000FF00) >> 8;
+	x[3] = (maxBin & 0x00FF0000) >> 16;
+	x[4] = (maxBin & 0xFF000000) >> 24;
+
+	maxBin = (uint32_t)results.maxBin[1];
+	x[5] = (maxBin & 0x000000FF);
+	x[6] = (maxBin & 0x0000FF00) >> 8;
+	x[7] = (maxBin & 0x00FF0000) >> 16;
+	x[8] = (maxBin & 0xFF000000) >> 24;
+
+	maxBin = (uint32_t)results.maxBin[2];
+	x[9] = (maxBin & 0x000000FF);
+	x[10] = (maxBin & 0x0000FF00) >> 8;
+	x[11] = (maxBin & 0x00FF0000) >> 16;
+	x[12] = (maxBin & 0xFF000000) >> 24;
+
+	maxBin = (uint32_t)results.maxBin[3];
+	x[13] = (maxBin & 0x000000FF);
+	x[14] = (maxBin & 0x0000FF00) >> 8;
+	x[15] = (maxBin & 0x00FF0000) >> 16;
+	x[16] = (maxBin & 0xFF000000) >> 24;
+
+	maxBin = (uint32_t)results.maxBin[4];
+	x[17] = (maxBin & 0x000000FF);
+	x[18] = (maxBin & 0x0000FF00) >> 8;
+	x[19] = (maxBin & 0x00FF0000) >> 16;
+	x[20] = (maxBin & 0xFF000000) >> 24;
+
+	maxBin = (uint32_t)results.maxValue;
+	x[21] = (maxBin & 0x000000FF);
+	x[22] = (maxBin & 0x0000FF00) >> 8;
+	x[23] = (maxBin & 0x00FF0000) >> 16;
+	x[24] = (maxBin & 0xFF000000) >> 24;
+
+	maxBin = (uint32_t)results.power;
+	x[25] = (maxBin & 0x000000FF);
+	x[26] = (maxBin & 0x0000FF00) >> 8;
+	x[27] = (maxBin & 0x00FF0000) >> 16;
+	x[28] = (maxBin & 0xFF000000) >> 24;
+
+	maxBin = (uint32_t)results.mean;
+	x[29] = (maxBin & 0x000000FF);
+	x[30] = (maxBin & 0x0000FF00) >> 8;
+	x[31] = (maxBin & 0x00FF0000) >> 16;
+	x[32] = (maxBin & 0xFF000000) >> 24;
+
+	maxBin = (uint32_t)results.variance;
+	x[33] = (maxBin & 0x000000FF);
+	x[34] = (maxBin & 0x0000FF00) >> 8;
+	x[35] = (maxBin & 0x00FF0000) >> 16;
+	x[36] = (maxBin & 0xFF000000) >> 24;
+
+	maxBin = (uint32_t)results.stdDev;
+	x[37] = (maxBin & 0x000000FF);
+	x[38] = (maxBin & 0x0000FF00) >> 8;
+	x[39] = (maxBin & 0x00FF0000) >> 16;
+	x[40] = (maxBin & 0xFF000000) >> 24;
+
+	maxBin = (uint32_t)results.skew;
+	x[41] = (maxBin & 0x000000FF);
+	x[42] = (maxBin & 0x0000FF00) >> 8;
+	x[43] = (maxBin & 0x00FF0000) >> 16;
+	x[44] = (maxBin & 0xFF000000) >> 24;
+
+	maxBin = (uint32_t)results.kurtosis;
+	x[45] = (maxBin & 0x000000FF);
+	x[46] = (maxBin & 0x0000FF00) >> 8;
+	x[47] = (maxBin & 0x00FF0000) >> 16;
+	x[48] = (maxBin & 0xFF000000) >> 24;
+
+//	int i = 0;
+//	for(;i<12;i++){
+//		debug_printf("0x%02x ", x[i]);
+//	}
+}
+
