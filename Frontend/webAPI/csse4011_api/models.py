@@ -18,6 +18,11 @@ class CorrMax(models.Model):
 	MaxBin = models.FloatField();
 	MaxValue = models.FloatField();
 	Timestamp = models.BigIntegerField();
+	
+class VehicleEstimate(models.Model):
+	latitude = models.CharField(max_length=21);
+	longitude = models.CharField(max_length=21);
+	Accuracy = models.FlaotField();
 
 
 
