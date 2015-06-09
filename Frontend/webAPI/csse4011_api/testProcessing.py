@@ -1,6 +1,7 @@
 import processing
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
 import Image
 
 def velocityModel(t):
@@ -36,33 +37,43 @@ def simulation(deployment, node1, node2):
 	distanceTraveled = 0
 	deltaT = 256/48e3
 	t = 0.0
-	while (distanceTraveled < distanceToTravel):
-		velocity = velocityModel(t)
+	n = 0
+
+	with open('inputDataset.csv', 'wb') as csvfile:
+		writer = csv.writer(csvfile, delimiter=',',quoting=csv.QUOTE_MINIMAL)
+
+		while (distanceTraveled < distanceToTravel):
+			velocity = velocityModel(t)
 		
-		carLocation = start.destinationPoint(distanceTraveled, bearing)
+			carLocation = start.destinationPoint(distanceTraveled, bearing)
 
-		node1delta = node1mic2.distanceTo(carLocation) - node1mic1.distanceTo(carLocation)
-		node2delta = node2mic2.distanceTo(carLocation) - node2mic1.distanceTo(carLocation)
+			node1delta = node1mic2.distanceTo(carLocation) - node1mic1.distanceTo(carLocation)
+			node2delta = node2mic2.distanceTo(carLocation) - node2mic1.distanceTo(carLocation)
 
-		node1shift = np.round(node1delta * node1.fs / node1.speedSound)
-		node2shift = np.round(node2delta * node2.fs / node2.speedSound)
+			node1shift = np.round(node1delta * node1.fs / node1.speedSound)
+			node2shift = np.round(node2delta * node2.fs / node2.speedSound)
 
-		node1measurement = processing.Measurement(node1shift, [0,0,0,0,0], 0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
-		node2measurement = processing.Measurement(node2shift, [0,0,0,0,0], 0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+			node1measurement = processing.Measurement(int(node1shift), [0,0,0,0,0], 0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+			node2measurement = processing.Measurement(int(node2shift), [0,0,0,0,0], 0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
 
-		res = deployment.processFrame(node1measurement, node2measurement)
+			res = deployment.processFrame(node1measurement, node2measurement)
 
-		if (res.valid):
-			rawLocations = np.concatenate((rawLocations, [[res.raw.lon, res.raw.lat]]), axis=0)
-			filteredLocations = np.concatenate((filteredLocations, [[res.filtered.lon, res.filtered.lat]]), axis=0)
-			rawTimeError = np.concatenate((rawTimeError, [[t, carLocation.distanceTo(res.raw)]]), axis=0)
-			filteredTimeError = np.concatenate((filteredTimeError, [[t, carLocation.distanceTo(res.filtered)]]), axis=0)
-			rawDistError = np.concatenate((rawDistError, [[midpoint.distanceTo(res.raw), carLocation.distanceTo(res.raw)]]), axis=0)
-			filteredDistError = np.concatenate((filteredDistError, [[midpoint.distanceTo(res.filtered), carLocation.distanceTo(res.filtered)]]), axis=0)
+			if (res.valid):
+				rawLocations = np.concatenate((rawLocations, [[res.raw.lon, res.raw.lat]]), axis=0)
+				filteredLocations = np.concatenate((filteredLocations, [[res.filtered.lon, res.filtered.lat]]), axis=0)
+				rawTimeError = np.concatenate((rawTimeError, [[t, carLocation.distanceTo(res.raw)]]), axis=0)
+				filteredTimeError = np.concatenate((filteredTimeError, [[t, carLocation.distanceTo(res.filtered)]]), axis=0)
+				rawDistError = np.concatenate((rawDistError, [[midpoint.distanceTo(res.raw), carLocation.distanceTo(res.raw)]]), axis=0)
+				filteredDistError = np.concatenate((filteredDistError, [[midpoint.distanceTo(res.filtered), carLocation.distanceTo(res.filtered)]]), axis=0)
 
-		locations = np.concatenate((locations, [[carLocation.lon, carLocation.lat]]), axis=0)
-		distanceTraveled = distanceTraveled + (velocity*deltaT)
-		t = t + deltaT
+
+
+			writer.writerow([node1shift, 5,4,3,2,1, 0.0, velocity, 1.0, 1.0, 1.0, 1.0, n])
+
+			locations = np.concatenate((locations, [[carLocation.lon, carLocation.lat]]), axis=0)
+			distanceTraveled = distanceTraveled + (velocity*deltaT)
+			t = t + deltaT
+			n = n + 1
 
 	print "Time taken: " + str(t) + "s"
 	colours = np.random.rand(locations.shape[0])
