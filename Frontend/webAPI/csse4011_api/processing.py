@@ -1,14 +1,18 @@
 
 # Latitude/Longititude distance and intersection formulas are adapted from 
 # http://www.movable-type.co.uk/scripts/latlong-vectors.html#intersection
-
 import numpy as np
+import csv
+import pybrain
+from pybrain.tools.customxml import NetworkReader
+
+neuralNetworkFilename = 'testNetwork.xml'
 
 def toRadians(degree):
-	return degree * np.pi / 180
+	return np.float64(degree * np.pi / 180)
 
 def toDegrees(radian):
-	return radian * 180 / np.pi
+	return np.float64(radian * 180 / np.pi)
 
 def ddToDms(dd):
    is_positive = dd >= 0
@@ -24,7 +28,45 @@ def errorModel(angle):
 		angle = 180 - angle
 	return 15*np.exp(-0.1*angle)
 
+def categoryToLabel(category):
+	if (category == 0):
+		return 'Car'
+	else:
+		return 'Not Car'
 
+def generateFeatureVector(measurement):
+	vector = np.zeros(11)
+	vector[0] = float(measurement.frequencies[0])
+	vector[1] = float(measurement.frequencies[1])
+	vector[2] = float(measurement.frequencies[2])
+	vector[3] = float(measurement.frequencies[3])
+	vector[4] = float(measurement.frequencies[4])
+	vector[5] = float(measurement.power)
+	vector[6] = float(measurement.mean)
+	vector[7] = float(measurement.variance)
+	vector[8] = float(measurement.stdDev)
+	vector[9] = float(measurement.skew)
+	vector[10] = float(measurement.kurtosis)
+	return vector
+
+class Measurement():
+	def __init__(self, maxBin, maxFrequencies, maxValue, power, mean, variance, skew, kurtosis):
+		self.bin = maxBin
+		self.value = maxValue
+		self.frequencies = maxFrequencies
+		self.power = power
+		self.mean = mean
+		self.variance = variance
+		self.stdDev = np.sqrt(variance)
+		self.skew = skew
+		self.kurtosis = kurtosis
+
+class Results:
+	def __init__(self, valid, rawIntersection, filteredIntersection, category):
+		self.valid = valid
+		self.raw = rawIntersection
+		self.filtered = filteredIntersection
+		self.category = category
 
 class Vector3D():
 	def __init__(self, x, y, z):
@@ -63,6 +105,15 @@ class Vector3D():
 	def angle(self, other):
 		sin = self.cross(other).mag()
 		cos = self.dot(other)
+		return np.arctan2(sin, cos)
+
+	def angleTo(self, other, sign):
+		sin = self.cross(other).mag()
+		cos = self.dot(other)
+		if self.cross(other).dot(sign) < 0:
+			sin = -sin
+		else:
+			sin = sin
 		return np.arctan2(sin, cos)
 
 	def unit(self):
@@ -113,6 +164,22 @@ class LatLon():
 		vectorZ = np.cos(lat)*np.sin(bearing)
 		return Vector3D(vectorX, vectorY, vectorZ)
 
+	def bearingTo(self, other):
+		lat1 = toRadians(self.lat)
+		lon1 = toRadians(self.lon)
+		lat2 = toRadians(other.lat)
+		lon2 = toRadians(other.lon)
+
+		dLon = lon2 - lon1
+		dPhi = np.log(np.tan(lat2/2.0 + np.pi/4.0)/np.tan(lat1/2.0 + np.pi/4.0))
+		if np.abs(dPhi) > np.pi:
+			if dLon > 0.0:
+				dLon = -(2.0*np.pi - dLon)
+			else:
+				dLon = -(2.0*np.pi + dLon)
+
+		return (toDegrees(np.arctan2(dLon, dPhi)) + 360) % 360
+
 	def destinationPoint(self, distance, bearing):
 		radius = 6371e3; #m
 
@@ -125,12 +192,16 @@ class LatLon():
 		return p2.toLatLon()
 
 	def distanceTo(self, other):
-		radius = 6371e3; #m
-		p1 = self.toVector()
-		p2 = other.toVector()
+		lat1 = toRadians(self.lat)
+		lon1 = toRadians(self.lon)
+		lat2 = toRadians(other.lat)
+		lon2 = toRadians(other.lon)
 
-		delta = p1.angle(p2)
-		return delta*radius
+		radius = 6371e3; #m
+
+		d  = 2*np.arcsin(np.sqrt((np.sin((lat1-lat2)/2.0)**2 + np.cos(lat1)*np.cos(lat2)*(np.sin((lon1-lon2)/2.0))**2)))
+
+		return d*radius
 
 
 	def midpointTo(self, other):
@@ -141,107 +212,171 @@ class LatLon():
 
 
 	def intersection(self, selfBearing, other, otherBearing):
-		point1 = self.toVector()
-		point2 = other.toVector()
+		lat1 = toRadians(self.lat)
+		lon1 = toRadians(self.lon)
+		lat2 = toRadians(other.lat)
+		lon2 = toRadians(other.lon)
 
-		bearing1 = self.greatCircle(selfBearing)
-		bearing2 = other.greatCircle(otherBearing)
+		theta13 = toRadians(selfBearing)
+		theta23 = toRadians(otherBearing)
 
-		int1 = bearing1.cross(bearing2)
-		int2 = bearing2.cross(bearing1)
+		deltaLat = lat2 - lat1
+		deltaLon = lon2 - lon1
 
-		midpoint = self.midpointTo(other)
+		delta12 = 2*np.arcsin(np.sqrt(np.sin(deltaLat/2)**2 + np.cos(lat1)*np.cos(lat2)*np.sin(deltaLon/2)**2))
+		thetaA = np.arccos((np.sin(lat2) - np.sin(lat1)*np.cos(delta12))/(np.sin(delta12)*np.cos(lat1)))
+		thetaB = np.arccos((np.sin(lat1) - np.sin(lat2)*np.cos(delta12))/(np.sin(delta12)*np.cos(lat2)))
 
-		# Return the closest intersection with respect to midpoint
-		# Probably only valid for distance between nodes much less
-		# than radius of earth, as they are in this case
-		dist1 = midpoint.distanceTo(int1)
-		dist2 = midpoint.distanceTo(int2)
-
-		if (dist1 < dist2):
-			return int1.toLatLon()
+		if (np.sin(lon2 - lon1) > 0):
+			theta12 = thetaA
+			theta21 = 2*np.pi - thetaB
 		else:
-			return int2.toLatLon()
+			theta12 = 2*np.pi - thetaA
+			theta21 = thetaB
+
+		alpha1 = ((theta13 - theta12 + np.pi) % (2*np.pi)) - np.pi
+		alpha2 = ((theta21 - theta23 + np.pi) % (2*np.pi)) - np.pi
+
+		alpha3 = np.arccos(-np.cos(alpha1)*np.cos(alpha2) + np.sin(alpha1)*np.sin(alpha2)*np.cos(delta12))
+		delta13 = np.arctan2(np.sin(delta12)*np.sin(alpha1)*np.sin(alpha2), np.cos(alpha2) + np.cos(alpha1)*np.cos(alpha3))
+	
+		lat3 = np.arcsin(np.sin(lat1)*np.cos(delta13) + np.cos(lat1)*np.sin(delta13)*np.cos(theta13))
+
+		deltaLon13 = np.arctan2(np.sin(theta13)*np.sin(delta13)*np.cos(lat1), np.cos(delta13) - np.sin(lat1)*np.sin(lat3))
+	
+		lon3 = ((lon1 + deltaLon13 + np.pi) % (2*np.pi)) - np.pi
+
+		#print "Debug"
+		#print theta13, theta23
+		#print theta12, theta21
+		#print thetaA, thetaB
+		#print delta12, delta13
+		#print alpha1, alpha2, alpha3
+		#print lat3, lon3
+		#print "End Debug"
+
+		return LatLon(toDegrees(lat3), toDegrees(lon3))
+
+class Kalman:
+    def __init__(self, x_init, cov_init, meas_err, proc_err, dt):
+        self.ndim = len(x_init)
+        self.A = np.array([(1, 0, dt, 0), (0, 1, 0, dt), (0, 0, 1, 0), (0, 0, 0, 1)]);
+        self.H = np.array([(1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)])
+        self.x_hat =  x_init
+        self.cov = cov_init
+        self.Q_k = np.eye(self.ndim)*proc_err
+        self.R = np.eye(len(self.H))*meas_err
+
+    def update(self, obs):
+
+        # Make prediction
+        self.x_hat_est = np.dot(self.A,self.x_hat)
+        self.cov_est = np.dot(self.A,np.dot(self.cov,np.transpose(self.A))) + self.Q_k
+
+        # Update estimate
+        self.error_x = obs - np.dot(self.H,self.x_hat_est)
+        self.error_cov = np.dot(self.H,np.dot(self.cov_est,np.transpose(self.H))) + self.R
+        self.K = np.dot(np.dot(self.cov_est,np.transpose(self.H)),np.linalg.inv(self.error_cov))
+        self.x_hat = self.x_hat_est + np.dot(self.K,self.error_x)
+        if self.ndim>1:
+            self.cov = np.dot((np.eye(self.ndim) - np.dot(self.K,self.H)),self.cov_est)
+        else:
+            self.cov = (1-self.K)*self.cov_est
+
 
 class Node():
 	def __init__(self, latitude, longitude, angularBearing, distance, samplingFrequency):
 		self.speedSound = 340.29  #m/s at sea level
 		self.location = LatLon(latitude, longitude)
-		self.bearing = angularBearing
+		self.bearing = toRadians(angularBearing)
 		self.micDist = distance
 		self.micDistSq = self.micDist ** 2
 		self.fs = samplingFrequency
 
-	def getAngle(self, sampleOffset):
+	def getAngle(self, sampleOffset, invert):
 		distanceDifference = sampleOffset * (self.speedSound / self.fs)
 		distanceDiffSq = distanceDifference ** 2
 		
-		arrivalAngle = np.arctan2(np.sqrt(np.abs(self.micDistSq - distanceDiffSq)), distanceDifference)
-
-		return self.bearing + toDegrees(arrivalAngle)
+		arrivalAngle = np.float64(np.arctan2(np.sqrt(np.abs(self.micDistSq - distanceDiffSq)), distanceDifference))
+		if (invert):
+			return (self.bearing - arrivalAngle) % (2*np.pi)
+		else:
+			return (self.bearing + arrivalAngle) % (2*np.pi)
 
 class Deployment():
 
 	def __init__(self, node1, node2, detectionRadius):
+		self.framelength = 256 #samples
+		self.deltaT = np.float64(self.framelength / 48e3)
 		self.node1 = node1
 		self.node2 = node2
 		self.radius = detectionRadius
 		self.midpoint = self.node1.location.midpointTo(self.node2.location)
+		self.kalman = Kalman([0.0], [0.0], 0.0, 0.0, self.deltaT)
+		self.classifier = NetworkReader.readFrom(neuralNetworkFilename)
+
+	def resetKalman(self, lat, lon, bearing, velocity):
+		ndim = 4
+		radEarth = 6371e3
+		x = [lon, lat, velocity*np.sin(toRadians(bearing))/radEarth, velocity*np.cos(toRadians(bearing))/radEarth]
+		cov_init=0.1*np.eye(ndim)
+		measurementNoise = 1
+		processNoise = 0.00001
+
+		self.Kalman = Kalman(x, cov_init, measurementNoise, processNoise, self.deltaT)
 
 	
-	def processFrame(self, featureVector1, featureVector2):
+	def processFrame(self, node1Measurement, node2Measurement):
 		
 		# Change these when actual feature vector is implemented
-		maxBin1 = featureVector1
-		maxBin2 = featureVector2
+		maxBin1 = node1Measurement.bin
+		maxBin2 = node2Measurement.bin
 
 		# Get source angle with reference to True North
-		angle1 = self.node1.getAngle(maxBin1)
-		angle2 = self.node2.getAngle(maxBin2)
+		angle1 = self.node1.getAngle(maxBin1, False)
+		angle2 = self.node2.getAngle(maxBin2, True)
 
 		# Get intersection of angles
-		intersection = self.node1.location.intersection(angle1, self.node2.location, angle2)
+		intersection = self.node1.location.intersection(toDegrees(angle1), self.node2.location, toDegrees(angle2))
+
+		#print maxBin1, toDegrees(angle1), maxBin2, toDegrees(angle2)
+		#print intersection
 
 		# Determine distance from center of nodes to intersection point
 		sourceDistance = self.midpoint.distanceTo(intersection)
 
-		print "Average distance to source is: {0}m".format(sourceDistance)
+		#print "Average distance to source is: {0}m".format(sourceDistance)
 
-		# Check that distance falls within acceptable region
+		#Check that distance falls within acceptable region
 		if (sourceDistance > self.radius):
-			return 0
+			return Results(False, 0, 0, 0)
 
 		# Get localisation error for each measured angle
 		# Ignore for now due to inaccuracies, most likely from earth radius value
-		error1 = errorModel(angle1)
-		node1dist = self.node1.location.distanceTo(intersection)
-		worstCaseLocation1 = self.node1.location.destinationPoint(node1dist, angle1 )
-		localisationError1 = intersection.distanceTo(worstCaseLocation1)
+		#error1 = errorModel(angle1)
+		#node1dist = self.node1.location.distanceTo(intersection)
+		#worstCaseLocation1 = self.node1.location.destinationPoint(node1dist, angle1 )
+		#localisationError1 = intersection.distanceTo(worstCaseLocation1)
 
-		error2 = errorModel(angle2)
-		node2dist = self.node2.location.distanceTo(intersection)
-		worstCaseLocation2 = self.node2.location.destinationPoint(node2dist, angle2 )
-		localisationError2 = intersection.distanceTo(worstCaseLocation2)
+		#error2 = errorModel(angle2)
+		#node2dist = self.node2.location.distanceTo(intersection)
+		#worstCaseLocation2 = self.node2.location.destinationPoint(node2dist, angle2 )
+		#localisationError2 = intersection.distanceTo(worstCaseLocation2)
 
-		return 1, intersection
+		velocityLon = (intersection.lon - self.Kalman.x_hat[0]) / self.deltaT
+		velocityLat = (intersection.lat - self.Kalman.x_hat[1]) / self.deltaT
 
+		self.Kalman.update([intersection.lon, intersection.lat, velocityLon, velocityLat])
 
+		node1classification = self.classifier.activate(generateFeatureVector(node1Measurement))
+		node2classification = self.classifier.activate(generateFeatureVector(node2Measurement))
+		
+		filteredIntersection = LatLon(self.Kalman.x_hat[1], self.Kalman.x_hat[0])
 
-
-node1 = Node(-27.499543, 153.009910, 0.0, 0.3, 48e3)
-node2 = Node(-27.499655, 153.010045, 0.0, 0.3, 48e3)
-
-deployment = Deployment(node1, node2,  50)
-
-valid, location = deployment.processFrame(-15, 28)
-
-if (valid):
-	print "Node 1: " + node1.location.decimalPrint();
-	print "Node 2: " + node2.location.decimalPrint();
-	print "Car: " +location.decimalPrint()
-
-
-
+		if (node1classification != node2classification):
+			return Results(True, intersection, filteredIntersection, 'No Car')
+		else:
+			return Results(True, intersection, filteredIntersection, categoryToLabel(node1classification))
 
 
 
