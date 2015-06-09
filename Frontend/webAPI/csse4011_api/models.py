@@ -22,7 +22,7 @@ class CorrMax(models.Model):
 class VehicleEstimate(models.Model):
 	latitude = models.CharField(max_length=21);
 	longitude = models.CharField(max_length=21);
-	Accuracy = models.FlaotField();
+	Accuracy = models.FloatField();
 
 
 
