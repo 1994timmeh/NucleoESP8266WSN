@@ -6,6 +6,7 @@ from .models import Node, Signal, CorrMax
 import socket
 import sys
 import _thread
+import time
 
 
 
@@ -55,7 +56,7 @@ def tcp_client_thread():
 
 		
 		while 1:
-			data = sock.recv(16)
+			data = sock.recv(1)
 			if data:
 				#split 
 				#
@@ -68,6 +69,14 @@ def tcp_client_thread():
 				c.save()
 				#s = Signal(Node_ID=1, Angle=90, Intensity=1, Timestamp=10000)
 				#s.save()
+				
+				
+				#TODO
+				#decode base64
+				#split by lines
+				#process into useable data
+				
+				
 
 	finally:
 		sock.close()
