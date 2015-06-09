@@ -1,4 +1,11 @@
 
+html, body { 
+	height: 100%; 
+	margin: 0; 
+	padding: 0;
+}
+
+
 #mapDiv {
 	height:60%;
 	position:fixed;
@@ -6,3 +13,18 @@
 	left: 0px;
 	right: 0px;
 }
+
+#nodesDiv {
+	height:40%;
+	position: fixed;
+	bottom: 0px;
+	left: 0px;
+	width: 20%;
+}
+
+.nodeInfo {
+	width: 100%;
+	position: relative;
+	margin: 20px;
+}
+

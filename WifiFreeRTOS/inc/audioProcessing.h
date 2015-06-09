@@ -14,7 +14,8 @@
 
 struct frameResults {
 	uint8_t validFrame;
-	int32_t maxBin[NUM_FREQUENCIES];
+	int32_t maxBin;
+	int32_t maxFrequencies[NUM_FREQUENCIES];
 	float32_t maxValue;
 	float32_t power;
 	float32_t mean;

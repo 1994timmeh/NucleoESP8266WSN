@@ -5,9 +5,7 @@ $( document ).ready(function() {
 
 var nodes = new Array();
 var signals = new Array();
-var refLong = 0;
-var refLat = 0;
-
+var map = null;
 
 function getNodes() {
 	$.getJSON( "http://127.0.0.1:8000/csse4011_api/Nodes/", addNodes);
@@ -17,6 +15,7 @@ function addNodes(data) {
 
 	$.each( data, function( key, val ) {
 		var node = val.fields;
+		node.active = "no";
 		nodes.push(node);
 		var debugString = "Node added - ID: " +
 			node.Node_ID +
@@ -29,6 +28,7 @@ function addNodes(data) {
 	
 	console.log(nodes.length + " nodes added");
 	loadMap();
+	showNodes();
 }
 
 
@@ -56,52 +56,60 @@ function addSignals(data) {
 
 
 
-
-
-
 function loadMap() {
-	$("#mapDiv").html(function() {
 	var latitude = nodes[0].latitude;
 	var longitude = nodes[0].longitude;
-	var mapScale = 2;
 	var mapZoom = 20;
 	var width = $( "#mapDiv" ).width();
 	var height = $( "#mapDiv" ).height();
-	return "<img id=\"mapImg\" src=\"https://maps.googleapis.com/maps/api/staticmap?center=" + 
-							latitude +
-							',' +
-							longitude +
-							"&zoom="+ mapZoom +"&scale="+ mapScale +"&size=" + width + "x" + height + "\"></img>";
+	var mapOptions = {
+          center: new google.maps.LatLng(parseFloat(latitude), parseFloat(longitude)),
+          zoom: mapZoom
+        };
+        map = new google.maps.Map(document.getElementById('mapDiv'),
+            mapOptions);
+	
+}
+
+function showSignals() {
+
+}
+
+function showCarEstimate() {
+
+}
+
+
+function updateNodesList() {
+	$( "#nodesDiv" ).html("<h2>Nodes:</h2><br><br>");
+	$.each(nodes, function( key, node ) {
+		$( "#nodesDiv" ).append("Node " + node.Node_ID + ":<br>" +
+								"		Latitude: " + node.latitude + "<br>" +
+								"		Longitude: " + node.longitude + "<br>" +
+								"		Active: " + node.active + "<br><br>");
 	});
-	
-	/* $.each(nodes, function() {
-		latlng = getPixel(latitude, longitude);
-		$("body").append(
-            $('<div></div>')
-                .css('position', 'absolute')
-                .css('top', getPixel(latitude)[0])
-                .css('left', mouseX + 'px')
-                .css('width', size)
-                .css('height', size)
-                .css('background-color', color)
-        );
-	}); */
 }
 
 
-function getPixel(latitude, longitude) {
-	
+
+function showNodes() {
+
+	 var nodeImage = {
+		url: 'res/images/Node.png',
+		size: new google.maps.Size(32, 32)
+	  };
+	  
+	  //var nodeImage = 'res/images/Node.png';
+
+	$.each(nodes, function( key, node ) {
+		var nodeLatLng = new google.maps.LatLng(node.latitude, node.longitude);
+		var beachMarker = new google.maps.Marker({
+			position: nodeLatLng,
+			map: map,
+			icon: nodeImage
+		});
+	});
+	updateNodesList();
 }
 
-
-function getCorners(center,zoom,mapWidth,mapHeight){
-    var scale = Math.pow(2,zoom);
-    var centerPx = proj.fromLatLngToPoint(center);
-    var SWPoint = {x: (centerPx.x -(mapWidth/2)/ scale) , y: (centerPx.y + (mapHeight/2)/ scale)};
-    var SWLatLon = proj.fromPointToLatLng(SWPoint);
-    alert('SW: ' + SWLatLon);
-    var NEPoint = {x: (centerPx.x +(mapWidth/2)/ scale) , y: (centerPx.y - (mapHeight/2)/ scale)};
-    var NELatLon = proj.fromPointToLatLng(NEPoint);
-    alert(' NE: '+ NELatLon);
-}
 

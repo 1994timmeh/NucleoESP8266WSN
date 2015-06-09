@@ -27,6 +27,10 @@ def CorrMaxs(request, timeStamp):
     output = serializers.serialize("json", CorrMax.objects.all())
     return HttpResponse(output)
 	
+def VehicleEstimates(request, timeStamp):
+    output = serializers.serialize("json", VehicleEstimate.objects.all())
+    return HttpResponse(output)
+	
 def StartTcpClient(request):
 	_thread.start_new_thread(tcp_client_thread, ())
 	return HttpResponse("client started(probably)")
