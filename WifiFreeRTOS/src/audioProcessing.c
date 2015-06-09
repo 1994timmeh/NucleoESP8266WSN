@@ -216,7 +216,7 @@ void serialize_results(struct frameResults results, uint8_t* x){
 
 	*(x++) = (uint8_t)results.validFrame;
 
-	uint32_t value = 0; //(uint32_t)results.maxBin;
+	uint32_t value = (uint32_t)results.maxBin;
 	*(x++) = (value & 0x000000FF);
 	*(x++) = (value & 0x0000FF00) >> 8;
 	*(x++) = (value & 0x00FF0000) >> 16;
@@ -291,10 +291,5 @@ void serialize_results(struct frameResults results, uint8_t* x){
 	value = (uint32_t)results.frameNo;
 	*(x++) = (value & 0x00FF);
 	*(x++) = (value & 0xFF00) >> 8;
-
-//	int i = 0;
-//	for(;i<12;i++){
-//		debug_printf("0x%02x ", x[i]);
-//	}
 }
 

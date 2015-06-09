@@ -411,10 +411,13 @@ void handle_RSSI_Data(uint8_t node, uint8_t* data_String,  uint8_t* raw_data) {
 }
 
 //############################ HELPER FUNCTIONS ###############################
-
+#define PACKETFORMAT "DA:[%d%d%d%s]"
 void Wifi_sendtoclient(uint8_t* data, int length){
+	uint8_t buffer[500];
+	//int len = ssprintf(buffer, dest, source, type, data);
+	int len = sprintf(buffer, PACKETFORMAT, 0, NODE_ID, 5, data);
 	if(client_Pipe != -1){
-		Wifi_senddata(client_Pipe, data, length);
+		Wifi_senddata(client_Pipe, buffer, len);
 	}
 }
 
