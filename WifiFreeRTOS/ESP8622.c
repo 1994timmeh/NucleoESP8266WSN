@@ -14,7 +14,7 @@
 #define FALSE 0
 #define NODE_ID 1
 
-#define USART_TX_TASK_PRIORITY					( tskIDLE_PRIORITY + 3 )
+#define USART_TX_TASK_PRIORITY					( tskIDLE_PRIORITY + 2 )
 #define USART_TX_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 10 )
 
 UART_HandleTypeDef UART_Handler;

@@ -23,6 +23,7 @@ struct frameResults {
 	float32_t stdDev;
 	float32_t skew;
 	float32_t kurtosis;
+	uint16_t frameNo;
 };
 
 void audioProcessingInit(void);

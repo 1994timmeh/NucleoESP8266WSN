@@ -145,14 +145,14 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	results->validFrame = consecutiveFrame;
 	results->maxBin = maxBin;
 	results->maxValue = maxValue;
-
-#ifdef AUDIODEBUG
-	if(consecutiveFrame){
-		debug_printf("maxValue: %d ", (int) (maxValue));
-		debug_printf("maxBin: %d\n", (int) maxBin);
-	}
-
-#endif
+//
+//#ifdef AUDIODEBUG
+//	if(consecutiveFrame){
+//		debug_printf("maxValue: %d ", (int) (maxValue));
+//		debug_printf("maxBin: %d\n", (int) maxBin);
+//	}
+//
+//#endif
 
 	return;
 }
@@ -189,10 +189,12 @@ void arm_copy_complex(float32_t* pSrc, float32_t* pDst, uint32_t blockSize) {
  * @throws none
  */
 void print_results(struct frameResults results){
-	debug_printf("=====RESULTS=====\n");
-	debug_printf("validFrame: %d\n", results.validFrame);
-	debug_printf("maxValue: %f\n", results.maxValue);
-	debug_printf("maxBin: %d\n\n", results.maxBin);
+	if(results.validFrame){
+		debug_printf("frameNumber: %d ", results.frameNo);
+		debug_printf("maxValue: %d ", (int)(results.maxValue));
+		debug_printf("maxBin: %d\n", results.maxBin);
+	}
+
 }
 
 //struct frameResults {
@@ -210,11 +212,11 @@ void print_results(struct frameResults results){
 void serialize_results(struct frameResults results, uint8_t* x){
 	// Note that standard deviation does not need to sent as it is just
 	// the square root of variance
-	// This function fills in 50 bytes
+	// This function fills in 51 bytes
 
 	*(x++) = (uint8_t)results.validFrame;
 
-	uint32_t value = (uint32_t)results.maxBin;
+	uint32_t value = 0; //(uint32_t)results.maxBin;
 	*(x++) = (value & 0x000000FF);
 	*(x++) = (value & 0x0000FF00) >> 8;
 	*(x++) = (value & 0x00FF0000) >> 16;
@@ -286,7 +288,9 @@ void serialize_results(struct frameResults results, uint8_t* x){
 	*(x++) = (value & 0x00FF0000) >> 16;
 	*(x++) = (value & 0xFF000000) >> 24;
 
-	*(x) = 0x00;
+	value = (uint32_t)results.frameNo;
+	*(x++) = (value & 0x00FF);
+	*(x++) = (value & 0xFF00) >> 8;
 
 //	int i = 0;
 //	for(;i<12;i++){

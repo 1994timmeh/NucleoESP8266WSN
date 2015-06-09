@@ -41,7 +41,7 @@ DMA_HandleTypeDef DMAHandle2;
 
 /* Private define ------------------------------------------------------------*/
 #define BUFFER_SIZE 256
-#define AUDIO_PRIORITY					( tskIDLE_PRIORITY + 2 )
+#define AUDIO_PRIORITY					( tskIDLE_PRIORITY + 4 )
 #define AUDIO_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
 
 #define TX_PRIORITY					( tskIDLE_PRIORITY + 2 )
@@ -58,6 +58,8 @@ float32_t ready_data2[BUFFER_SIZE];
 uint32_t buffer1;
 uint32_t buffer2;
 
+uint16_t frameNumber = 0;
+
 //extern typedef struct Ap Access_Point;
 int8_t client_Pipe = -1;
 int32_t time_Offset = 0;	// time offset relative to master -time means infront
@@ -67,7 +69,6 @@ SemaphoreHandle_t processing_Semaphore;
 QueueHandle_t validDataQueue;
 
 TaskHandle_t AudioTaskHandle;
-
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -82,6 +83,7 @@ void adc_switch_channel_1( void );
 void ApplicationIdleHook( void ); /* The idle hook is used to blink the Blue 'Alive LED' every second */
 void Audio_Task( void );
 void TX_Task( void );
+void rateChecker( void );
 void Software_timer( void );
 
 void tim2_irqhandler( void );
@@ -144,16 +146,31 @@ float32_t test2[] = {0.63577,1.0957,-1.7048,-0.43299,-0.35294,-0.0011875,0.46182
   * @retval None
   */
 void Audio_Task( void ) {
+	__BRD_D4_GPIO_CLK();
+	GPIO_InitTypeDef  GPIO_InitStructure;
+
+	GPIO_InitStructure.Pin = BRD_D4_PIN;				//Pin
+	GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;		//Output Mode
+	GPIO_InitStructure.Pull = GPIO_PULLDOWN;			//Enable Pull up, down or no pull resister
+	GPIO_InitStructure.Speed = GPIO_SPEED_FAST;			//Pin latency
+	HAL_GPIO_Init(BRD_D4_GPIO_PORT, &GPIO_InitStructure);	//Initialise Pin
+
 	vTaskSuspend(NULL);
 	for (;;) {
 		struct frameResults results;
 		if(xSemaphoreTake(processing_Semaphore, 1) == pdTRUE) {
+			HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, 1);
 			audioProcessFrame(ready_data1, ready_data2, &results);
+			// Give this frame a number
+			results.frameNo = frameNumber++;
+
 			if(results.validFrame){
+				print_results(results);
 				if(xQueueSendToBack(validDataQueue, (void *)&results, 1) == pdFALSE){
 					debug_printf("validFrame queue is full\n");
 				}
 			}
+			HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, 0);
 		}
 	}
 }
@@ -187,13 +204,12 @@ void TX_Task( void ){
 		if (xQueueReceive( validDataQueue, &results, 1) && (client_Pipe != -1)) {
 			if(string_len < 350){ //65 bytes for an encoded packet + 5 buffer len = 4(n/3)
 				serialize_results(results, &(data[string_len]));
-				string_len += 50;
+				string_len += 51;
 				reading_count++;
 			} else {
 				int len = b64_encode(data, b64_data, string_len);
 				Wifi_sendtoclient(b64_data, len);
 				debug_printf("Sending %d readings as payload %d of length %d.\n", reading_count, seq++, len);
-				BRD_LEDToggle();
 
 				//Clean up for next time
 				reading_count = 0;
