@@ -1,3 +1,4 @@
+#include "main.h"
 #include "board.h"
 #include "stm32f4xx_hal_conf.h"
 #include "debug_printf.h"
@@ -12,10 +13,9 @@
 
 #define TRUE 1
 #define FALSE 0
-#define NODE_ID 1
 
 #define USART_TX_TASK_PRIORITY					( tskIDLE_PRIORITY + 2 )
-#define USART_TX_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 10 )
+#define USART_TX_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 15 )
 
 UART_HandleTypeDef UART_Handler;
 DMA_HandleTypeDef hdma_tx;
@@ -33,7 +33,7 @@ volatile int sendOK = FALSE;
 volatile int prompt = FALSE;
 
 char line_buffer[500];
-uint8_t line_buffer_index = 0;
+uint16_t line_buffer_index = 0;
 
 char ip_addr_string[20];
 char uart_buffer[500];
@@ -42,6 +42,7 @@ uint8_t* uart_tx_buffer;
 
 extern int32_t time_Offset;
 extern int8_t client_Pipe;
+extern volatile uint16_t frameNumber;
 APs* Access_Points;
 
 extern void Audio_Task( void );
@@ -106,10 +107,10 @@ void ESP8622_init( uint32_t baud ){
 	xTaskCreate( (void *) &UART_Processor, (const signed char *) "DATA", WIFI_STACK_SIZE, NULL, WIFI_PRIORITY, NULL );
 
 	Data_Queue = xQueueCreate(5, sizeof(char[500]));
-	Access_Points = pvPortMalloc(sizeof(APs));
-	Access_Points->size = 0;
-	Access_Points->HEAD = NULL;
-	Access_Points->TAIL = NULL;
+//	Access_Points = pvPortMalloc(sizeof(APs));
+//	Access_Points->size = 0;
+//	Access_Points->HEAD = NULL;
+//	Access_Points->TAIL = NULL;
 }
 
 void dma_Init(void) {
@@ -171,33 +172,35 @@ void UART_Processor( void ){
   char new_data[500];
 
   for(;;){
-      if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
-        //debug_printf("LINE RX: %s\n", new_data);
+      if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r' && new_data != NULL){
+        debug_printf("LINE RX: %s\n", new_data);
         //We have new data analyze it
-        if(strncmp(&(new_data[0]), "+IPD", 4) == 0){
-          BRD_LEDToggle();
-        	//debug_printf("1: %s\n", new_data);
-         // debug_printf("Data: %s\n", &(new_data[5]));
-          handle_data(new_data+5);
+        if( strncmp(&(new_data[0]), "+IPD", 4 ) == 0) {
+			BRD_LEDToggle();
+			handle_data(new_data+5);
 
-        } else if(strncmp(&(new_data[0]), "SEND OK", 7) == 0){
+        } else if( strncmp(&(new_data[0]), "SEND OK", 7) == 0 ) {
 			sendOK = TRUE;
-		} else if(strncmp(&(new_data[0]), "OK", 2) == 0 || strncmp(&(new_data[0]), "ready", 5) == 0
-    || strncmp(&(new_data[0]), "no change", 9) == 0) {
-          //Set the last task passed flag
-          lastTaskPassed = TRUE;
 
-        } else if(new_data[0] == '>'){
-          prompt = TRUE;
+		} else if( strncmp(&(new_data[0]), "OK", 2) == 0 || strncmp(&(new_data[0]), "ready", 5) == 0 || strncmp(&(new_data[0]), "no change", 9) == 0 ) {
+			//Set the last task passed flag
+			lastTaskPassed = TRUE;
 
-        } else if (strncmp(new_data, "192.168", 7) == 0) {
-        	memset(ip_addr_string, 0, 20);
-			    memcpy(ip_addr_string, new_data, 20);
-			    debug_printf("IP Address: %s\n", ip_addr_string);
-
-  	    } else if (strncmp(new_data, "+CWLAP:", 7) == 0){
-  				handle_Access_Point(new_data);
-  	    }
+        } else if( new_data[0] == '>' ) {
+			prompt = TRUE;
+		}
+//        } else if (strncmp(new_data, "192.168", 7) == 0) {
+//        	memset(ip_addr_string, 0, 20);
+//			memcpy(ip_addr_string, new_data, 20);
+//			debug_printf("IP Address: %s\n", ip_addr_string);
+//
+//  	    } else if (strncmp(new_data, "+CWLAP:", 7) == 0){
+//  				handle_Access_Point(new_data);
+//
+//  	    } else if(strncmp(new_data, "link is not", 11) == 0){
+//			debug_printf("We have dropped the connection somehow\n");
+//			//TODO Auto reconnect
+//		}
       }
       vTaskDelay(10);
   }
@@ -258,13 +261,6 @@ uint8_t esp_send(uint8_t* send_String) {
 			if (HAL_UART_Transmit_DMA(&UART_Handler, (uint8_t*)uart_tx_buffer, l) != HAL_OK) {
 				return 0;
 			}
-//			for (i = 0; i < l; i++) {
-//				if (HAL_UART_Transmit(&UART_Handler, (uint8_t*)uart_tx_buffer+i, 1, 10) != HAL_OK) {
-//					for(;;) {
-//						//error
-//					}
-//				}
-//			}
 			return 1;
 		}
 	}
@@ -279,14 +275,7 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
 	 char* bssid = pvPortMalloc(sizeof(char)*30);
 	 char channel[5];
 
-
-   //debug_printf("WiFi AP found: %s\n", apString);
 	 sscanf(apString, "+CWLAP:(%c,\"%[^\"]\",-%[^,],\"%[^\"]\",%[^)])", zero, essid, rssi, bssid, channel);
-  //  debug_printf("essid: %s\n", essid);
-	//  debug_printf("rssi: %s\n", rssi);
-  //  debug_printf("bssid: %s\n", bssid);
-  //  debug_printf("channel: %s\n", channel);
-
 	 Access_Point* access_Point = pvPortMalloc(sizeof(Access_Point));
 	 access_Point->RSSI = atoi(rssi);
 	 access_Point->channel = atoi(channel);
@@ -297,21 +286,9 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
 	 memcpy(access_Point->BSSID, bssid, 30);
 
 	 add_AP(access_Point);
-	 //debug_printf("Distinct APs found: %d", Access_Points->size);
 
    rssii = atoi(rssi);
 
-  //  //LEDBAR for signal strength
-  //  if(strncmp(essid, "NUCLEOWSN", 9) == 0){
-  //     debug_printf("RSSI: %d Distance: %f\n", rssii, RSSItoDistance(rssii));
-   //
-  //     HAL_GPIO_WritePin(BRD_D3_GPIO_PORT, BRD_D3_PIN, rssii < 67.5);
-  //     HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, rssii < 60);
-  //     HAL_GPIO_WritePin(BRD_D5_GPIO_PORT, BRD_D5_PIN, rssii < 52.5);
-  //     HAL_GPIO_WritePin(BRD_D6_GPIO_PORT, BRD_D6_PIN, rssii < 45);
-  //     HAL_GPIO_WritePin(BRD_D7_GPIO_PORT, BRD_D7_PIN, rssii < 37.5);
-  //     HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, rssii < 30);
-  //  }
    vPortFree(essid);
    vPortFree(bssid);
  }
@@ -319,35 +296,47 @@ void handle_Access_Point (char* apString) { //(0,"Visitor-UQconnect",-71,"00:25:
 
 void handle_data(char* data) {
 	uint8_t pipestr[10], lengthstr[10];
-  uint8_t pipe_no = 0, length = 0;
-  char message[50];
-  char* raw_message = pvPortMalloc(sizeof(uint8_t)*50);
-  memset(message, 0, 50);
-  char trash;
+	uint8_t pipe_no = 0, length = 0;
+	char message[500];
+	char* raw_message = pvPortMalloc(sizeof(uint8_t)*500);
+	memset(message, 0, 500);
+	char trash;
 
-  sscanf(data, "%[^,],%[^:]:%s", pipestr, lengthstr, message);
-  pipe_no = atoi(pipestr);
-  length = atoi(lengthstr);
-  raw_message = strcpy(raw_message, message);
+	sscanf(data, "%[^,],%[^:]:%s", pipestr, lengthstr, message);
+	pipe_no = atoi(pipestr);
+	length = atoi(lengthstr);
+	raw_message = strcpy(raw_message, message);
 
-  //debug_printf("Received data! Pipe=%d, length=%d, message=%s\n", pipe_no, length, message);
-  if(strncmp(message, "TS:[", 4) == 0){
-    char new_time[10];
-    sscanf(message, "TS:[%[^]]]", new_time);
-    time_Offset = (uint32_t)atoi(new_time) - xTaskGetTickCount();
-  } else if(strncmp(message, "TE:[", 4) == 0){
-    debug_printf("Message received: %s\n", message + 4);
-  } else if(strncmp(message, "DA:[", 4) == 0){
-	    debug_printf("Data received: %s\n", message + 4);
-	    handle_Messages(pipe_no, message + 4, raw_message);
-  }
-  vPortFree(raw_message);
-
+	debug_printf("Received data! Pipe=%d, length=%d, message=%s\n", pipe_no, length, message);
+	if(strncmp(message, "TS:[", 4) == 0){
+		char new_time[10];
+		sscanf(message, "TS:[%[^]]]", new_time);
+		time_Offset = (uint32_t)atoi(new_time) - xTaskGetTickCount();
+	} else if(strncmp(message, "TE:[", 4) == 0){
+		debug_printf("Message received: %s\n", message + 4);
+	} else if(strncmp(message, "DA:[", 4) == 0){
+		debug_printf("Data received: %s\n", message + 4);
+		handle_Messages(pipe_no, message + 4, raw_message);
+	} else if(strncmp(message, "RG:[", 4) == 0){
+		debug_printf("Got registration command\n");
+		#ifdef MASTERNODE
+			debug_printf("Updating all frame numbers\n");
+			Wifi_senddata(0, "RG:[0]", 6);
+			Wifi_senddata(1, "RG:[0]", 6);
+			Wifi_senddata(2, "RG:[0]", 6);
+		#else
+			char frame[10];
+			sscanf(message, "RG:[%[^]]]", frame);
+			frameNumber = atoi(frame);
+			debug_printf("Updating frame number to %s\n", frame);
+		#endif
+	}
+	vPortFree(raw_message);
 }
 
 void handle_Messages(uint8_t pipe_no, uint8_t* message, uint8_t* raw_data) {
 	uint8_t l = 0, dest, source, type;
-	uint8_t* data_String = pvPortMalloc(sizeof(uint8_t)*30);
+	uint8_t* data_String = pvPortMalloc(sizeof(uint8_t)*500);
 	uint8_t c, i;
 	uint8_t ack_String[20];
 	if (*message < 0x30 || *message > 0x39 || (l = strlen(message)) < 4) {
@@ -370,30 +359,16 @@ void handle_Messages(uint8_t pipe_no, uint8_t* message, uint8_t* raw_data) {
 		}
 	} while (c);
 
-	//debug_printf("Data received: %s\n\r", data_String);
-
-	//sprintf(ack_String, "DA:[%d%d7ACK]", source, NODE_ID);
-	//Wifi_senddata(pipe_no, ack_String, strlen(ack_String));
-
 	/* 	setup client	*/
 	if (source == 0) {
 		client_Pipe = pipe_no;
-		debug_printf("client connected\n\r");
+		debug_printf("client connected on pipe %d\n\r", client_Pipe);
 	}
 
 	// Data for client
 	if (dest == 0){
 		debug_printf("FORWARDING: %d\n", raw_data);
-		Wifi_sendtoclient(raw_data, strlen(raw_data));
-	}
-
-
-	if ( type == 5) {
-		//handle_Ultrasonic_Data(source, data_String, raw_data);
-
-	}
-	if ( type == 4) {
-		handle_RSSI_Data(source, data_String,  raw_data);
+		Wifi_senddata(client_Pipe, raw_data, strlen(raw_data));
 	}
 	vPortFree(data_String);
 }
@@ -406,7 +381,6 @@ void handle_RSSI_Data(uint8_t node, uint8_t* data_String,  uint8_t* raw_data) {
 	/* forward to client	*/
 	if (client_Pipe >= 0 && client_Pipe <= 4) {
 		Wifi_senddata(client_Pipe, raw_data, 10);
-		/* HACK HERE	*/
 	}
 }
 
@@ -492,7 +466,7 @@ void Wifi_join(char* SSID, char* password){
 
   //HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
   esp_send(( uint8_t* )command);
-  waitForPassed(5000);
+  waitForPassed(50000);
 		}
 			xSemaphoreGive(esp_Semaphore);
 			}
@@ -502,16 +476,16 @@ void Wifi_join(char* SSID, char* password){
 void Wifi_setmode(){
 	if (esp_Semaphore != NULL) {
 		if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
-  char command[50] = WIFI_CMD_MODE_BOTH;
+		  char command[50] = WIFI_CMD_MODE_BOTH;
 
-  debug_printf("Setting module mode\n");
+		  debug_printf("Setting module mode\n");
 
-  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MODE_BOTH, 10);
-  esp_send(command);
-  waitForPassed(5000);
+		  //HAL_UART_Transmit(&UART_Handler, &(command[0]), WIFI_LEN_MODE_BOTH, 10);
+		  esp_send(command);
+		  waitForPassed(5000);
+				}
+		xSemaphoreGive(esp_Semaphore);
 		}
-			xSemaphoreGive(esp_Semaphore);
-			}
 }
 
 /* Lists the AP names in return type
@@ -560,7 +534,7 @@ void Wifi_setAP(char* SSID, char* password, uint8_t chan, uint8_t sec){
   char command[50];
   int len;
 
-  debug_printf("Setting AP details (probably crashing the wifi)\n");
+  debug_printf("Setting AP details\n");
 
   len = sprintf(&(command[0]), WIFI_CMD_SET_AP, SSID, password, chan, sec);
   //HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
@@ -711,14 +685,14 @@ void Wifi_setBaudRate(uint32_t baud) {
 void Wifi_connectTCP( char* ip, int port){
 	if (esp_Semaphore != NULL) {
 	if( xSemaphoreTake( esp_Semaphore, ( TickType_t ) 10 ) == pdTRUE ) {
-  char command[50];
-  int len = sprintf(command, "AT+CIPSTART=0,\"TCP\",\"%s\",%d\r\n", ip, 8888);
-  //HAL_UART_Transmit(&UART_Handler, command, len, 10);
-  esp_send(command);
-  waitForPassed(5000);
+		char command[50];
+		int len = sprintf(command, "AT+CIPSTART=0,\"TCP\",\"%s\",%d\r\n", ip, 8888);
+		//HAL_UART_Transmit(&UART_Handler, command, len, 10);
+		esp_send(command);
+		waitForPassed(5000);
 	}
-		xSemaphoreGive(esp_Semaphore);
-		}
+	xSemaphoreGive(esp_Semaphore);
+	}
 }
 
 void Wifi_senddata(uint8_t pipe_no, const char* data, int length){
@@ -734,7 +708,6 @@ void Wifi_senddata(uint8_t pipe_no, const char* data, int length){
 
 			memcpy(send_data, data, length);
 			memcpy(send_data+length, line_break, 3);
-			//HAL_UART_Transmit(&UART_Handler, send_data, len, 10);
 			vTaskDelay(50);
 			esp_send(send_data);
 			waitForSendOK(2000);

@@ -10,6 +10,7 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+#include "main.h"
 #include "board.h"
 #include "stm32f4xx_hal_conf.h"
 #include "debug_printf.h"
@@ -27,8 +28,6 @@
 #include "audioProcessing.h"
 #include "base64.h"
 
-#define NODE_ID 1
-
 /* Private typedef -----------------------------------------------------------*/
 ADC_HandleTypeDef AdcHandle1;
 ADC_HandleTypeDef AdcHandle2;
@@ -38,16 +37,6 @@ TIM_HandleTypeDef TIM_Init;
 DMA_HandleTypeDef DMAHandle1;
 DMA_HandleTypeDef DMAHandle2;
 
-
-/* Private define ------------------------------------------------------------*/
-#define BUFFER_SIZE 256
-#define AUDIO_PRIORITY					( tskIDLE_PRIORITY + 4 )
-#define AUDIO_STACK_SIZE		( configMINIMAL_STACK_SIZE * 2 )
-
-#define TX_PRIORITY					( tskIDLE_PRIORITY + 2 )
-#define TX_STACK_SIZE		( configMINIMAL_STACK_SIZE * 10 )
-
-/* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 volatile int sampleNo1 = 0, sampleNo2 = 0;
 // Audio sample buffers
@@ -58,7 +47,7 @@ float32_t ready_data2[BUFFER_SIZE];
 uint32_t buffer1;
 uint32_t buffer2;
 
-uint16_t frameNumber = 0;
+volatile uint16_t frameNumber = 0;
 
 //extern typedef struct Ap Access_Point;
 int8_t client_Pipe = -1;
@@ -69,32 +58,6 @@ SemaphoreHandle_t processing_Semaphore;
 QueueHandle_t validDataQueue;
 
 TaskHandle_t AudioTaskHandle;
-
-/* Private function prototypes -----------------------------------------------*/
-
-//Initialization
-void Hardware_init();
-void timer_interupt_init( void );
-void adc_hardware_init();
-void adc_switch_channel_0( void );
-void adc_switch_channel_1( void );
-
-//FreeRTOS
-void ApplicationIdleHook( void ); /* The idle hook is used to blink the Blue 'Alive LED' every second */
-void Audio_Task( void );
-void TX_Task( void );
-void rateChecker( void );
-void Software_timer( void );
-
-void tim2_irqhandler( void );
-void tim3_dma( void );
-
-void DMACompleteISR1( void );
-void DMACompleteISR2( void );
-void Error_Handler( void );
-void Delay(uint32_t cycles);
-
-
 
 /**
   * @brief  Starts all the other tasks, then starts the scheduler.
@@ -117,8 +80,12 @@ int main( void ) {
 	validDataQueue = xQueueCreate(50, sizeof(struct frameResults));
 
 	/* Start the task to flash the LED. */
-	xTaskCreate( (void *) &Audio_Task, (const signed char *) "AUD", AUDIO_STACK_SIZE, NULL, AUDIO_PRIORITY , &AudioTaskHandle );
+	#ifndef MASTERNODE
+		xTaskCreate( (void *) &Audio_Task, (const signed char *) "AUD", AUDIO_STACK_SIZE, NULL, AUDIO_PRIORITY , &AudioTaskHandle );
+	#endif
+
 	xTaskCreate( (void *) &TX_Task, (const signed char *) "TX", TX_STACK_SIZE, NULL, TX_PRIORITY, NULL );
+
 	//xTaskCreate( (void *) &Software_timer, (const signed char *) "TIME", TESTING_STACK_SIZE, NULL, TESTING_PRIORITY + 1, NULL );
 
 	/* Start the scheduler.
@@ -187,42 +154,53 @@ void TX_Task( void ){
 	int reading_count = 0, string_len = 0;
 
 	int seq = 0;
-
+	vTaskDelay(1000);
 	ESP8622_init(230400);
+
 	Wifi_setmode();
-	sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
-	Wifi_setAP(SSID,"password", 5, 0);
-	Wifi_set_AP_IP("192.168.3.1");
-	Wifi_enserver();
 
-	memset(data, 0, 500);
+	#ifndef MASTERNODE
+		sprintf(&(SSID[0]), "NUCLEOWSN%d", NODE_ID);
+		Wifi_setAP(SSID,"password", 5, 0);
 
-	vTaskResume(AudioTaskHandle);
+		Wifi_enserver();
+
+		debug_printf("Connecting to MASTERNODE\n");
+		Wifi_join("MASTERNODE", "");
+		vTaskDelay(1000);
+		Wifi_connectTCP("192.168.1.1", 8888);
+
+		Wifi_senddata(0, "RG:[0]", 6);
+		vTaskResume(AudioTaskHandle);
+	#else
+		Wifi_setAP("MASTERNODE","password", 5, 0);
+		Wifi_set_AP_IP("192.168.1.1");
+		Wifi_enserver();
+	#endif
 
 	for(;;) {
 		struct frameResults results;
-		if (xQueueReceive( validDataQueue, &results, 1) && (client_Pipe != -1)) {
+		if (xQueueReceive( validDataQueue, &results, 1)) {
 			if(string_len < 350){ //65 bytes for an encoded packet + 5 buffer len = 4(n/3)
-				serialize_results(results, &(data[string_len]));
+				serialize_results(&results, &(data[string_len]));
 				string_len += 51;
 				reading_count++;
 			} else {
 				int len = b64_encode(data, b64_data, string_len);
-				Wifi_sendtoclient(b64_data, len);
-				debug_printf("Sending %d readings as payload %d of length %d.\n", reading_count, seq++, len);
+
+				uint8_t buffer[500];
+				int data_len = sprintf(buffer, PACKETFORMAT, 0, NODE_ID, 5, b64_data);
+				debug_printf("Sending data of length: %d\n", data_len);
+				Wifi_senddata(0, buffer, data_len);
 
 				//Clean up for next time
 				reading_count = 0;
 				string_len = 0;
+
 				memset(data, 0, 500);
 				memset(b64_data, 0, 500);
 			}
 		}
-//
-//		char buffer[10] = "HELLO";
-//		char dest[20];
-//		int len = b64_encode(buffer, dest);
-//		debug_printf("HELLO ->Base64-> %s is %d long\n", dest, len);
 	}
 }
 
@@ -435,7 +413,7 @@ void adc_hardware_init() {
 		for(;;);
 	}
 
-#ifdef ADCDEBUG
+	#ifdef ADCDEBUG
 		debug_printf("DEBUG: ADC/DMA Init has completed\n");
 	#endif
 

@@ -209,86 +209,86 @@ void print_results(struct frameResults results){
 //	float32_t skew;
 //	float32_t kurtosis;
 //};
-void serialize_results(struct frameResults results, uint8_t* x){
+void serialize_results(struct frameResults* results, uint8_t* x){
 	// Note that standard deviation does not need to sent as it is just
 	// the square root of variance
 	// This function fills in 51 bytes
 
-	*(x++) = (uint8_t)results.validFrame;
+	*(x++) = (uint8_t)results->validFrame;
 
-	uint32_t value = (uint32_t)results.maxBin;
+	uint32_t value = (uint32_t)(results->maxBin);
 	*(x++) = (value & 0x000000FF);
 	*(x++) = (value & 0x0000FF00) >> 8;
 	*(x++) = (value & 0x00FF0000) >> 16;
 	*(x++) = (value & 0xFF000000) >> 24;
 
-	value = (uint32_t)results.maxFrequencies[0];
+	value = (uint32_t)(results->maxFrequencies[0]*10000);
 	*(x++) = (value & 0x000000FF);
 	*(x++) = (value & 0x0000FF00) >> 8;
 	*(x++) = (value & 0x00FF0000) >> 16;
 	*(x++) = (value & 0xFF000000) >> 24;
 
-	value = (uint32_t)results.maxFrequencies[1];
+	value = (uint32_t)(results->maxFrequencies[1]*10000);
 	*(x++) = (value & 0x000000FF);
 	*(x++) = (value & 0x0000FF00) >> 8;
 	*(x++) = (value & 0x00FF0000) >> 16;
 	*(x++) = (value & 0xFF000000) >> 24;
 
-	value = (uint32_t)results.maxFrequencies[2];
+	value = (uint32_t)(results->maxFrequencies[2]*10000);
 	*(x++) = (value & 0x000000FF);
 	*(x++) = (value & 0x0000FF00) >> 8;
 	*(x++) = (value & 0x00FF0000) >> 16;
 	*(x++) = (value & 0xFF000000) >> 24;
 
-	value = (uint32_t)results.maxFrequencies[3];
+	value = (uint32_t)(results->maxFrequencies[3]*10000);
 	*(x++) = (value & 0x000000FF);
 	*(x++) = (value & 0x0000FF00) >> 8;
 	*(x++) = (value & 0x00FF0000) >> 16;
 	*(x++) = (value & 0xFF000000) >> 24;
 
-	value = (uint32_t)results.maxFrequencies[4];
+	value = (uint32_t)(results->maxFrequencies[4]*10000);
 	*(x++) = (value & 0x000000FF);
 	*(x++) = (value & 0x0000FF00) >> 8;
 	*(x++) = (value & 0x00FF0000) >> 16;
 	*(x++) = (value & 0xFF000000) >> 24;
 
-	value = (uint32_t)results.maxValue;
+	value = (uint32_t)(results->maxValue*10000);
 	*(x++) = (value & 0x000000FF);
 	*(x++) = (value & 0x0000FF00) >> 8;
 	*(x++) = (value & 0x00FF0000) >> 16;
 	*(x++) = (value & 0xFF000000) >> 24;
 
-	value = (uint32_t)results.power;
+	value = (uint32_t)(results->power*10000);
 	*(x++) = (value & 0x000000FF);
 	*(x++) = (value & 0x0000FF00) >> 8;
 	*(x++) = (value & 0x00FF0000) >> 16;
 	*(x++) = (value & 0xFF000000) >> 24;
 
-	value = (uint32_t)results.mean;
+	value = (uint32_t)(results->mean*10000);
 	*(x++) = (value & 0x000000FF);
 	*(x++) = (value & 0x0000FF00) >> 8;
 	*(x++) = (value & 0x00FF0000) >> 16;
 	*(x++) = (value & 0xFF000000) >> 24;
 
-	value = (uint32_t)results.variance;
+	value = (uint32_t)(results->variance*10000);
 	*(x++) = (value & 0x000000FF);
 	*(x++) = (value & 0x0000FF00) >> 8;
 	*(x++) = (value & 0x00FF0000) >> 16;
 	*(x++) = (value & 0xFF000000) >> 24;
 
-	value = (uint32_t)results.skew;
+	value = (uint32_t)(results->skew*10000);
 	*(x++) = (value & 0x000000FF);
 	*(x++) = (value & 0x0000FF00) >> 8;
 	*(x++) = (value & 0x00FF0000) >> 16;
 	*(x++) = (value & 0xFF000000) >> 24;
 
-	value = (uint32_t)results.kurtosis;
+	value = (uint32_t)(results->kurtosis*10000);
 	*(x++) = (value & 0x000000FF);
 	*(x++) = (value & 0x0000FF00) >> 8;
 	*(x++) = (value & 0x00FF0000) >> 16;
 	*(x++) = (value & 0xFF000000) >> 24;
 
-	value = (uint32_t)results.frameNo;
+	value = (uint16_t)results->frameNo;
 	*(x++) = (value & 0x00FF);
 	*(x++) = (value & 0xFF00) >> 8;
 }
