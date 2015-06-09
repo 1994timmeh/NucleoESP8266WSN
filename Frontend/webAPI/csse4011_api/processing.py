@@ -1,9 +1,12 @@
 
 # Latitude/Longititude distance and intersection formulas are adapted from 
 # http://www.movable-type.co.uk/scripts/latlong-vectors.html#intersection
-
 import numpy as np
-import matplotlib.pyplot as plt
+import csv
+import pybrain
+from pybrain.tools.customxml import NetworkReader
+
+neuralNetworkFilename = 'testNetwork.xml'
 
 def toRadians(degree):
 	return np.float64(degree * np.pi / 180)
@@ -25,7 +28,45 @@ def errorModel(angle):
 		angle = 180 - angle
 	return 15*np.exp(-0.1*angle)
 
+def categoryToLabel(category):
+	if (category == 0):
+		return 'Car'
+	else:
+		return 'Not Car'
 
+def generateFeatureVector(measurement):
+	vector = np.zeros(11)
+	vector[0] = float(measurement.frequencies[0])
+	vector[1] = float(measurement.frequencies[1])
+	vector[2] = float(measurement.frequencies[2])
+	vector[3] = float(measurement.frequencies[3])
+	vector[4] = float(measurement.frequencies[4])
+	vector[5] = float(measurement.power)
+	vector[6] = float(measurement.mean)
+	vector[7] = float(measurement.variance)
+	vector[8] = float(measurement.stdDev)
+	vector[9] = float(measurement.skew)
+	vector[10] = float(measurement.kurtosis)
+	return vector
+
+class Measurement():
+	def __init__(self, maxBin, maxFrequencies, maxValue, power, mean, variance, skew, kurtosis):
+		self.bin = maxBin
+		self.value = maxValue
+		self.frequencies = maxFrequencies
+		self.power = power
+		self.mean = mean
+		self.variance = variance
+		self.stdDev = np.sqrt(variance)
+		self.skew = skew
+		self.kurtosis = kurtosis
+
+class Results:
+	def __init__(self, valid, rawIntersection, filteredIntersection, category):
+		self.valid = valid
+		self.raw = rawIntersection
+		self.filtered = filteredIntersection
+		self.category = category
 
 class Vector3D():
 	def __init__(self, x, y, z):
@@ -216,14 +257,6 @@ class LatLon():
 
 		return LatLon(toDegrees(lat3), toDegrees(lon3))
 
-
-class Results:
-	def __init__(self, valid, rawIntersection, filteredIntersection, category):
-		self.valid = valid
-		self.raw = rawIntersection
-		self.filtered = filteredIntersection
-		self.category = category
-
 class Kalman:
     def __init__(self, x_init, cov_init, meas_err, proc_err, dt):
         self.ndim = len(x_init)
@@ -280,23 +313,24 @@ class Deployment():
 		self.radius = detectionRadius
 		self.midpoint = self.node1.location.midpointTo(self.node2.location)
 		self.kalman = Kalman([0.0], [0.0], 0.0, 0.0, self.deltaT)
+		self.classifier = NetworkReader.readFrom(neuralNetworkFilename)
 
 	def resetKalman(self, lat, lon, bearing, velocity):
 		ndim = 4
 		radEarth = 6371e3
 		x = [lon, lat, velocity*np.sin(toRadians(bearing))/radEarth, velocity*np.cos(toRadians(bearing))/radEarth]
-		cov_init=0.01*np.eye(ndim)
-		measurementNoise = 0.0001
-		processNoise = 0.0001
+		cov_init=0.1*np.eye(ndim)
+		measurementNoise = 1
+		processNoise = 0.00001
 
 		self.Kalman = Kalman(x, cov_init, measurementNoise, processNoise, self.deltaT)
 
 	
-	def processFrame(self, featureVector1, featureVector2):
+	def processFrame(self, node1Measurement, node2Measurement):
 		
 		# Change these when actual feature vector is implemented
-		maxBin1 = featureVector1
-		maxBin2 = featureVector2
+		maxBin1 = node1Measurement.bin
+		maxBin2 = node2Measurement.bin
 
 		# Get source angle with reference to True North
 		angle1 = self.node1.getAngle(maxBin1, False)
@@ -319,122 +353,30 @@ class Deployment():
 
 		# Get localisation error for each measured angle
 		# Ignore for now due to inaccuracies, most likely from earth radius value
-		error1 = errorModel(angle1)
+		#error1 = errorModel(angle1)
 		#node1dist = self.node1.location.distanceTo(intersection)
 		#worstCaseLocation1 = self.node1.location.destinationPoint(node1dist, angle1 )
 		#localisationError1 = intersection.distanceTo(worstCaseLocation1)
 
-		error2 = errorModel(angle2)
+		#error2 = errorModel(angle2)
 		#node2dist = self.node2.location.distanceTo(intersection)
 		#worstCaseLocation2 = self.node2.location.destinationPoint(node2dist, angle2 )
 		#localisationError2 = intersection.distanceTo(worstCaseLocation2)
-
 
 		velocityLon = (intersection.lon - self.Kalman.x_hat[0]) / self.deltaT
 		velocityLat = (intersection.lat - self.Kalman.x_hat[1]) / self.deltaT
 
 		self.Kalman.update([intersection.lon, intersection.lat, velocityLon, velocityLat])
 
-		filteredIntersection = LatLon(self.Kalman.x_hat[1], self.Kalman.x_hat[0])
-		return Results(True, intersection, filteredIntersection, 'N/A')
-
-
-
-
-def velocityModel(t):
-	return 100.0 + np.sin(t) #constant velocity
-
-def simulation(deployment, node1, node2):
-	start = LatLon(-27.499158, 153.010547)
-	end = LatLon(-27.500826, 153.008367)
-
-	print "bearing: " + str(start.bearingTo(end)) + "degrees"
-	print "distance: " + str(start.distanceTo(end)) + "m"
-
-	bearing = start.bearingTo(end)
-	distanceToTravel = start.distanceTo(end)
-
-	locations = np.array([[start.lon, start.lat]])
-	rawLocations = np.array([[start.lon, start.lat]])
-
-	node1mic1 = node1.location.destinationPoint(0.15, (0.0 + toDegrees(node1.bearing)) % 360)
-	node1mic2 = node1.location.destinationPoint(0.15, (180 + toDegrees(node1.bearing)) % 360)
-	node2mic1 = node2.location.destinationPoint(0.15, (0.0 + toDegrees(node2.bearing)) % 360)
-	node2mic2 = node2.location.destinationPoint(0.15, (180 + toDegrees(node2.bearing)) % 360)
-
-	distanceTraveled = 0
-	deltaT = 256/48e3
-	t = 0.0
-	while (distanceTraveled < distanceToTravel):
-		velocity = velocityModel(t)
+		node1classification = self.classifier.activate(generateFeatureVector(node1Measurement))
+		node2classification = self.classifier.activate(generateFeatureVector(node2Measurement))
 		
-		carLocation = start.destinationPoint(distanceTraveled, bearing)
+		filteredIntersection = LatLon(self.Kalman.x_hat[1], self.Kalman.x_hat[0])
 
-		node1delta = node1mic2.distanceTo(carLocation) - node1mic1.distanceTo(carLocation)
-		node2delta = node2mic2.distanceTo(carLocation) - node2mic1.distanceTo(carLocation)
-
-		node1shift = np.round(node1delta * node1.fs / node1.speedSound)
-		node2shift = np.round(node2delta * node2.fs / node2.speedSound)
-
-		res = deployment.processFrame(node1shift, node2shift)
-
-		if (res.valid):
-			rawLocations = np.concatenate((rawLocations, [[res.raw.lon, res.raw.lat]]), axis=0)
-
-		locations = np.concatenate((locations, [[carLocation.lon, carLocation.lat]]), axis=0)
-		distanceTraveled = distanceTraveled + (velocity*deltaT)
-		t = t + deltaT
-
-	print "Time taken: " + str(t) + "s"
-	colours = np.random.rand(locations.shape[0])
-
-	plt.figure()
-
-	# Plot simulated trajectory
-	plt.scatter(locations[:,0], locations[:,1],s=10, c='k', edgecolors='none', alpha=0.5, marker='o', label="true location")
-	# Plot detected audio
-	plt.scatter(rawLocations[:,0], rawLocations[:,1],s=10, c='g', edgecolors='none', alpha=0.5, marker='o', label="raw detected locations")
-
-	# Plot node locations
-	plt.scatter(node1.location.lon, node1.location.lat, s = 50, c='r', marker='x')
-	plt.scatter(node2.location.lon, node2.location.lat, s = 50, c='r', marker='x')
-
-	# Plot mic locations
-	plt.scatter(node1mic1.lon, node1mic1.lat, s = 20, c='r', marker='+')
-	plt.scatter(node1mic2.lon, node1mic2.lat, s = 20, c='r', marker='+')
-	plt.scatter(node2mic1.lon, node2mic1.lat, s = 20, c='r', marker='+')
-	plt.scatter(node2mic2.lon, node2mic2.lat, s = 20, c='r', marker='+')
-
-	# Plott start and end points
-	plt.scatter(start.lon, start.lat, s = 50, c='b', marker='x')
-	plt.scatter(end.lon, end.lat, s = 50, c='b', marker='x')
-
-	plt.axes().set_aspect('equal', adjustable='box')
-	plt.show()
-
-
-
-
-node1 = Node(-27.499543, 153.009910, 43, 0.3, 48e3)
-node2 = Node(-27.499655, 153.010045, 43, 0.3, 48e3)
-
-deployment = Deployment(node1, node2,  50)
-
-deployment.resetKalman(-27.499543, 153.009910, 270, 10)
-
-print node1.location
-
-simulation(deployment, node1, node2)
-
-quit()
-
-if (res.valid):
-	print "Node 1: " + node1.location.decimalPrint();
-	print "Node 2: " + node2.location.decimalPrint();
-	print "Raw Car: " +res.raw.decimalPrint()
-	print "Filtered Car: " +res.filtered.decimalPrint()
-
-
+		if (node1classification != node2classification):
+			return Results(True, intersection, filteredIntersection, 'No Car')
+		else:
+			return Results(True, intersection, filteredIntersection, categoryToLabel(node1classification))
 
 
 
