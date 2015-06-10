@@ -102,6 +102,9 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 
 	arm_real(combinedData, xcorr, AUDIO_FRAME_LENGTH);
 
+	// Zero invalid correlations
+	arm_fill_f32(0.0, xcorr + 50, AUDIO_FRAME_LENGTH - 100);
+
 	// Find maximum correlation points
 	arm_max_f32(xcorr, AUDIO_FRAME_LENGTH, &maxValue, &maxBin);
 	maxBin = (maxBin + (AUDIO_FRAME_LENGTH/2)) % AUDIO_FRAME_LENGTH;
