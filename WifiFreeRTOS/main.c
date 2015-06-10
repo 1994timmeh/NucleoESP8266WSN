@@ -135,6 +135,7 @@ void Audio_Task( void ) {
 			HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, 0);
 			// Give this frame a number
 			results.frameNo = frameNumber++;
+			debug_printf("%d\n", results.maxBin);
 
 			if(results.validFrame){
 				//print_results(results);
