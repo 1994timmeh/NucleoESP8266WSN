@@ -154,29 +154,32 @@ function redrawCars() {
 }
 
 function drawEstimate(estimateType, estimate) {
-	var estimateImage = {
-		url: 'res/images/green_dot.png',
-		size: new google.maps.Size(32, 32)
-	};
-	var estimateFilteredImage = {
-		url: 'res/images/red_dot.png',
-		size: new google.maps.Size(32, 32)
-	};
 
 	if (!estimateType) {	// estimates
 		var estimateLatLng = new google.maps.LatLng(estimate.latitude, estimate.longitude);
-		var beachMarker = new google.maps.Marker({
-			position: estimateLatLng,
-			map: map,
-			icon: estimateImage
-		});
+		var marker = new google.maps.Marker({
+		    position: estimateLatLng,
+		    icon: {
+		      path: google.maps.SymbolPath.CIRCLE,
+		      scale: 4,
+		      strokeColor: 'green'
+		    },
+		    draggable: false,
+		    map: map
+		  });
+
 	} else {				// filtered Estimates
 		var estimateFilteredLatLng = new google.maps.LatLng(estimate.latitudeFiltered, estimate.longitudeFiltered);
-		var beachMarker = new google.maps.Marker({
-			position: estimateFilteredLatLng,
-			map: map,
-			icon: estimateFilteredImage
-		});
+		var marker = new google.maps.Marker({
+		    position: estimateFilteredLatLng,
+		    icon: {
+		      path: google.maps.SymbolPath.CIRCLE,
+		      scale: 4,
+		      strokeColor: 'red'
+		    },
+		    draggable: false,
+		    map: map
+		  });
 	}
 
 }
