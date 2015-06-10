@@ -113,3 +113,83 @@ function showNodes() {
 }
 
 
+
+
+var lastFrame = 0;
+var carEstimates = []
+var carsDrawn = []
+var showEstimates = 1;
+var showFilteredEstimates = 1;
+
+
+function pollForCars() {
+	$.getJSON( "http://127.0.0.1:8000/csse4011_api/VehicleEstimates/" + lastFrame + "/", addCars);
+}
+
+function addCars(data) {
+	$.each( data, function( key, val ) {
+		var estimate = val.fields;
+		carEstimates.push(estimate);
+		console.log("car added - Frame: " + estimate.FrameNum);
+		lastFrame=estimate.FrameNum;
+
+		drawCars();
+	});
+}
+
+
+function drawCars() {
+	$.each(carEstimates, function( key, estimate) {
+		if (showEstimates && carsDrawn.indexOf(estimate.FrameNum) < 0) {
+			drawEstimate(0, estimate);
+		}
+		if (showFilteredEstimates && carsDrawn.indexOf(estimate.FrameNum) < 0){
+			drawEstimate(1, estimate);
+		}
+	});
+}
+
+function redrawCars() {
+	
+}
+
+function drawEstimate(estimateType, estimate) {
+	var estimateImage = {
+		url: 'res/images/green_dot.png',
+		size: new google.maps.Size(32, 32)
+	};
+	var estimateFilteredImage = {
+		url: 'res/images/red_dot.png',
+		size: new google.maps.Size(32, 32)
+	};
+
+	if (!estimateType) {	// estimates
+		var estimateLatLng = new google.maps.LatLng(estimate.latitude, estimate.longitude);
+		var beachMarker = new google.maps.Marker({
+			position: estimateLatLng,
+			map: map,
+			icon: estimateImage
+		});
+	} else {				// filtered Estimates
+		var estimateFilteredLatLng = new google.maps.LatLng(estimate.latitudeFiltered, estimate.longitudeFiltered);
+		var beachMarker = new google.maps.Marker({
+			position: estimateFilteredLatLng,
+			map: map,
+			icon: estimateFilteredImage
+		});
+	}
+
+}
+
+
+function startTCPAction() {
+	$.getJSON( "http://127.0.0.1:8000/csse4011_api/StartTcpClient/", function() {
+		//nothing
+	});
+	// start polling
+	setInterval(pollForCars, 100);
+}
+
+
+
+

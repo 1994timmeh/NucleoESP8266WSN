@@ -1,7 +1,7 @@
 from django.shortcuts import HttpResponse
 from django.core import serializers
 
-from .models import Node, Signal, CorrMax, Frame
+from .models import Node, Signal, CorrMax, Frame, VehicleEstimate
 
 import socket
 import sys
@@ -13,6 +13,10 @@ import base64
 
 
 
+import csse4011_api.processing
+
+
+
 #views here
 
 def index(request):
@@ -21,26 +25,26 @@ def index(request):
 def Nodes(request):
     output = serializers.serialize("json", Node.objects.all())
     return HttpResponse(output)
-	
-	
+    
+    
 def Signals(request, timeStamp):
     output = serializers.serialize("json", Signal.objects.all())
     return HttpResponse(output)
-	
+    
 def CorrMaxs(request, timeStamp):
     output = serializers.serialize("json", CorrMax.objects.all())
     return HttpResponse(output)
-	
+    
 def VehicleEstimates(request, timeStamp):
-    output = serializers.serialize("json", VehicleEstimate.objects.all())
+    output = serializers.serialize("json", VehicleEstimate.objects.filter(FrameNum__gt = timeStamp))
     return HttpResponse(output)
-	
+    
 def StartTcpClient(request):
-	_thread.start_new_thread(tcp_client_thread, ())
-	return HttpResponse("client started(probably)")
-	
-	
-	
+    _thread.start_new_thread(tcp_client_thread, ())
+    return HttpResponse("client started(probably)")
+    
+    
+    
 
 
 
@@ -67,7 +71,8 @@ def handleFrame(frameNum, frameDataDecoded, f, node_ID):
     print("validFrame: " + str(frameData[0]));
     
     if frameData[1] > 2147483647: #this is a hack
-        maxBin = 2147483647*2 - frameData[1]
+        maxBin = -1*(2147483647*2 - frameData[1])
+
     else:
         maxBin = frameData[1]
     print("maxBin: " + str(maxBin));
@@ -113,63 +118,84 @@ def handleFrame(frameNum, frameDataDecoded, f, node_ID):
         str(power) + ',' +
         str(mean) + ',' +
         str(variance) + ',' +
-        str(skew) + ',' +
+         str(skew) + ',' +
         str(kurtosis) + ',' +
+        str(frameNumNode) + ',' +
         str(node_ID) +
-          '\n')
+        '\n')
 
     # save to database
-    # frame = new Frame(MaxBin = maxBin, 
-    # 		MaxFrequencies = maxFrequencies.join(','),
-    # 		MaxValue = maxValue,
-    # 		Power = power,
-    # 		Mean = mean,
-    # 		Variance = variance,
-    # 		Skew = skew,
-    # 		Kurtosis = kurtosis,
-    # 		Node_ID = node_ID)
-    # frame.save()
+    #   frame = Frame(MaxBin = maxBin, 
+    # MaxFrequencies = ','.join(maxFrequencies),
+    # MaxValue = maxValue,
+    # Power = power,
+    # Mean = mean,
+    # Variance = variance,
+    # Skew = skew,
+    # Kurtosis = kurtosis,
+    # Node_ID = node_ID)
+    #   frame.save()
+    nodemeasurement = processing.Measurement(int(maxBin), maxFrequencies, maxValue, power, mean, variance, skew, kurtosis)
+    print("<processing here> Node_ID: " + str(node_ID))
+    return nodemeasurement
 
 
 # TODO move this hack elsewhere
 def tcp_client_thread():
-		
-	f = open('./csse4011_api/logs/framesLog_' + str(int(time.time())) + '.csv','w')
+        
+    f = open('./csse4011_api/logs/framesLog_' + str(int(time.time())) + '.csv','w')
 
-	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-	server_addr = ('192.168.1.1', 8888)
-	sock.connect(server_addr)
-	sock.send(bytes("DA:[100]", 'UTF-8'))
+    server_addr = ('192.168.1.1', 8888)
+    sock.connect(server_addr)
+    sock.send(bytes("DA:[100]", 'UTF-8'))
 
+    node0measurements = []
+    node1measurements = []
 
+    #setup processing environment
+    nodes = Node.objects.all()
+    node1 = processing.Node(nodes[0].latitude, node[0].longitude, 43, 0.3, 48e3)
+    node2 = processing.Node(nodes[1].latitude, node[1].longitude, 43, 0.3, 48e3)
 
-	while(True):
-	    data = sock.recv(1000)
-	    node_ID = int(data[5])
-	    data = data[7:-1]
-	    print("----------------------------------------------------------")
-	    print(data)
-	    print("-----------------------------------------------------------")
-	    #node = int(data[5])
-	    #print("NODE_ID: " + str(node))
-	    decoded = base64.b64decode(data)
-	    print(decoded)
-	    frameData = []
-	    frameNum = 0
-	    word = 0
+    deployment = processing.Deployment(node1, node2,  50)
+    deployment.resetKalman(nodes[0].latitude, nodes[1].longitude, 0, 0)
 
-	        
-	        
-	    for a in range(0, int(len(decoded)/51)): 
-	        handleFrame(a, decoded[51*a:51*a+51], f, node_ID)
-	        
-	    #     for i in range(0, 4):
-	    #         if
-	    #         maxFrequencies.append(object)
-	    #     
-	    #     
-	    #     
-	    
-	    
-	f.close()
+    lastFrameComplete = -1;
+
+    while(True):
+        data = sock.recv(1000)
+        node_ID = int(data[5])
+        print("----------------------------------------------------------")
+        print(data)
+        print("-----------------------------------------------------------")
+        data = data[7:-1]
+        print(data)
+        print("-----------------------------------------------------------")
+        #node = int(data[5])
+        #print("NODE_ID: " + str(node))
+        decoded = base64.b64decode(data)
+        print(decoded)
+        frameData = []
+        frameNum = 0
+        word = 0
+
+            
+            
+        for a in range(0, int(len(decoded)/51)): 
+            if node_ID == 0:
+                node0measurements.append(handleFrame(a, decoded[51*a:51*a+51], f, node_ID))
+            elif node_ID == 1:
+                node1measurements.append(handleFrame(a, decoded[51*a:51*a+51], f, node_ID))
+            else:
+                printf("INVALID NODE_ID: " + str(node_ID))
+            
+
+        # find two  
+        print("node0measurements - length: " + str(len(node0measurements)))
+        print("node1measurements - length: " + str(len(node1measurements)))
+
+        
+        
+    f.close()
