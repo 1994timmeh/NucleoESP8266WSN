@@ -28,3 +28,8 @@ html, body {
 	margin: 20px;
 }
 
+#startTCP {
+	position: relative;
+	margin: 20px;
+	left: 30%;
+}
