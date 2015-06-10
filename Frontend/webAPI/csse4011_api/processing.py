@@ -181,7 +181,7 @@ class LatLon():
 		return (toDegrees(np.arctan2(dLon, dPhi)) + 360) % 360
 
 	def destinationPoint(self, distance, bearing):
-		radius = 6371e3; #m
+		radius = 6371e3 #m
 
 		angularDist = distance / radius
 		c = self.greatCircle(bearing)
@@ -197,7 +197,7 @@ class LatLon():
 		lat2 = toRadians(other.lat)
 		lon2 = toRadians(other.lon)
 
-		radius = 6371e3; #m
+		radius = 6371e3 #m
 
 		d  = 2*np.arcsin(np.sqrt((np.sin((lat1-lat2)/2.0)**2 + np.cos(lat1)*np.cos(lat2)*(np.sin((lon1-lon2)/2.0))**2)))
 
@@ -258,33 +258,32 @@ class LatLon():
 		return LatLon(toDegrees(lat3), toDegrees(lon3))
 
 class Kalman:
-    def __init__(self, x_init, cov_init, meas_err, proc_err, dt):
-        self.ndim = len(x_init)
-        self.A = np.array([(1, 0, dt, 0), (0, 1, 0, dt), (0, 0, 1, 0), (0, 0, 0, 1)]);
-        self.H = np.array([(1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)])
-        self.x_hat =  x_init
-        self.cov = cov_init
-        self.Q_k = np.eye(self.ndim)*proc_err
-        self.R = np.eye(len(self.H))*meas_err
+	def __init__(self, x_init, cov_init, meas_err, proc_err, dt):
+		self.ndim = len(x_init)
+		self.A = np.array([(1, 0, dt, 0), (0, 1, 0, dt), (0, 0, 1, 0), (0, 0, 0, 1)])
+		self.H = np.array([(1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)])
+		self.x_hat =  x_init
+		self.cov = cov_init
+		self.Q_k = np.eye(self.ndim)*proc_err
+		self.R = np.eye(len(self.H))*meas_err
 
-	def updateDeltaT(self, dt):
-		self.A = np.array([(1, 0, dt, 0), (0, 1, 0, dt), (0, 0, 1, 0), (0, 0, 0, 1)]);
+	def updateDeltaTime(self, dt):
+		self.A = np.array([(1, 0, dt, 0), (0, 1, 0, dt), (0, 0, 1, 0), (0, 0, 0, 1)])
 
-    def update(self, obs):
+	def update(self, obs):
+		# Make prediction
+		self.x_hat_est = np.dot(self.A,self.x_hat)
+		self.cov_est = np.dot(self.A,np.dot(self.cov,np.transpose(self.A))) + self.Q_k
 
-        # Make prediction
-        self.x_hat_est = np.dot(self.A,self.x_hat)
-        self.cov_est = np.dot(self.A,np.dot(self.cov,np.transpose(self.A))) + self.Q_k
-
-        # Update estimate
-        self.error_x = obs - np.dot(self.H,self.x_hat_est)
-        self.error_cov = np.dot(self.H,np.dot(self.cov_est,np.transpose(self.H))) + self.R
-        self.K = np.dot(np.dot(self.cov_est,np.transpose(self.H)),np.linalg.inv(self.error_cov))
-        self.x_hat = self.x_hat_est + np.dot(self.K,self.error_x)
-        if self.ndim>1:
-            self.cov = np.dot((np.eye(self.ndim) - np.dot(self.K,self.H)),self.cov_est)
-        else:
-            self.cov = (1-self.K)*self.cov_est
+		# Update estimate
+		self.error_x = obs - np.dot(self.H,self.x_hat_est)
+		self.error_cov = np.dot(self.H,np.dot(self.cov_est,np.transpose(self.H))) + self.R
+		self.K = np.dot(np.dot(self.cov_est,np.transpose(self.H)),np.linalg.inv(self.error_cov))
+		self.x_hat = self.x_hat_est + np.dot(self.K,self.error_x)
+		if self.ndim>1:
+			self.cov = np.dot((np.eye(self.ndim) - np.dot(self.K,self.H)),self.cov_est)
+		else:
+			self.cov = (1-self.K)*self.cov_est
 
 
 class Node():
@@ -326,7 +325,7 @@ class Deployment():
 		measurementNoise = 1
 		processNoise = 0.00001
 
-		self.Kalman = Kalman(x, cov_init, measurementNoise, processNoise, self.deltaT)
+		self.kalman = Kalman(x, cov_init, measurementNoise, processNoise, self.deltaT)
 
 	
 	def processFrame(self, node1Measurement, node2Measurement, framesSinceLast):
@@ -366,16 +365,16 @@ class Deployment():
 		#worstCaseLocation2 = self.node2.location.destinationPoint(node2dist, angle2 )
 		#localisationError2 = intersection.distanceTo(worstCaseLocation2)
 
-		velocityLon = (intersection.lon - self.Kalman.x_hat[0]) / self.deltaT
-		velocityLat = (intersection.lat - self.Kalman.x_hat[1]) / self.deltaT
+		velocityLon = (intersection.lon - self.kalman.x_hat[0]) / self.deltaT
+		velocityLat = (intersection.lat - self.kalman.x_hat[1]) / self.deltaT
 
-		self.Kalman.updateDeltaT(self.deltaT * framesSinceLast)
-		self.Kalman.update([intersection.lon, intersection.lat, velocityLon, velocityLat])
+		self.kalman.updateDeltaTime(self.deltaT * framesSinceLast)
+		self.kalman.update([intersection.lon, intersection.lat, velocityLon, velocityLat])
 
 		node1classification = self.classifier.activate(generateFeatureVector(node1Measurement))
 		node2classification = self.classifier.activate(generateFeatureVector(node2Measurement))
 		
-		filteredIntersection = LatLon(self.Kalman.x_hat[1], self.Kalman.x_hat[0])
+		filteredIntersection = LatLon(self.kalman.x_hat[1], self.kalman.x_hat[0])
 
 		if (node1classification != node2classification):
 			return Results(True, intersection, filteredIntersection, 'No Car')

@@ -13,11 +13,13 @@
 void arm_copy_complex(float32_t* pSrc, float32_t* pDst, uint32_t blockSize);
 
 // FFT Arrays
-float32_t micOneFFTdata[FFT_LENGTH];
-float32_t micTwoFFTdata[FFT_LENGTH];
-float32_t micOneFFT[2*FFT_LENGTH];
-float32_t micTwoFFT[2*FFT_LENGTH];
-float32_t combinedData[2*FFT_LENGTH];
+float32_t micOneFFTdata[AUDIO_FRAME_LENGTH];
+float32_t micTwoFFTdata[AUDIO_FRAME_LENGTH];
+float32_t micOneFFT[AUDIO_FRAME_LENGTH];
+float32_t micTwoFFT[AUDIO_FRAME_LENGTH];
+float32_t combinedData[AUDIO_FRAME_LENGTH];
+float32_t xcorr[AUDIO_FRAME_LENGTH];
+float32_t frequencyMag[AUDIO_FRAME_LENGTH];
 
 // FFT Variables
 uint32_t ifftFlag = 0;
@@ -29,7 +31,8 @@ int32_t pastBins[SLIDING_WINDOW_LENGTH];
 void audioProcessingInit(void) {
 	GPIO_InitTypeDef  GPIO_InitStructure;
 	uint8_t i;
-	arm_rfft_fast_init_f32(&fftStructures, FFT_LENGTH);
+	arm_rfft_fast_init_f32(&fftStructures, AUDIO_FRAME_LENGTH);
+
 	for (i = 0; i < SLIDING_WINDOW_LENGTH; i++) {
 		pastBins[i] = 2*AUDIO_FRAME_LENGTH;
 	}
@@ -73,12 +76,12 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 #endif /* DEBUG PINS */
 
 	// Initialise both data sequences as 0.0
-	arm_fill_f32(0.0,  micOneFFTdata, FFT_LENGTH);
-	arm_fill_f32(0.0,  micTwoFFTdata, FFT_LENGTH);
+	arm_fill_f32(0.0, micOneFFTdata, AUDIO_FRAME_LENGTH);
+	arm_fill_f32(0.0, micTwoFFTdata, AUDIO_FRAME_LENGTH);
 
 	// Fill both data arrays with audio data, mic two data is reversed
-	arm_copy_f32(micOneData,  micOneFFTdata, AUDIO_FRAME_LENGTH);
-	arm_copy_f32(micTwoData + AUDIO_FRAME_LENGTH,  micTwoFFTdata, AUDIO_FRAME_LENGTH);
+	arm_copy_f32(micOneData, micOneFFTdata, AUDIO_FRAME_LENGTH);
+	arm_copy_f32(micTwoData, micTwoFFTdata, AUDIO_FRAME_LENGTH);
 
 	// Perform complex fft on mic data
 	ifftFlag = 0;
@@ -86,18 +89,21 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	arm_rfft_fast_f32(&fftStructures, micTwoFFTdata, micTwoFFT, ifftFlag);
 
 	// Multiply
-	arm_cmplx_mult_cmplx_f32(micOneFFT, micTwoFFT, combinedData, FFT_LENGTH);
+	arm_cmplx_conj_f32(micOneFFT, micOneFFT, AUDIO_FRAME_LENGTH/2);
+	micOneFFT[1] = -micOneFFT[1];	
+
+	arm_cmplx_mult_cmplx_f32(micOneFFT, micTwoFFT, combinedData, AUDIO_FRAME_LENGTH/2);
 	// Because first complex byte contains two packed real values
 	combinedData[0] = micOneFFT[0] * micTwoFFT[0];
 	combinedData[1] = micOneFFT[1] * micTwoFFT[1];
 
 	// Perform IFFT
 	ifftFlag = 1;
-	arm_rfft_fast_f32(&fftStructures, combinedData, micOneFFTdata, ifftFlag);
+	arm_rfft_fast_f32(&fftStructures, combinedData, xcorr, ifftFlag);
 
 	// Find maximum  correlation points
-	arm_max_f32(micOneFFTdata, FFT_LENGTH, &maxValue, &maxBin);
-	maxBin = (AUDIO_FRAME_LENGTH - 1) - maxBin;
+	arm_max_f32(xcorr, AUDIO_FRAME_LENGTH, &maxValue, &maxBin);
+	maxBin = (AUDIO_FRAME_LENGTH/2 - 1) - maxBin;
 
 	// Compare maximum bin to previous bins
 	consecutiveFrame = 1;
@@ -120,23 +126,23 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	//HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x01);
 #endif /* DEBUG PINS */
 
-	arm_cmplx_mag_f32(combinedData, micOneFFTdata, FFT_LENGTH);	
+	arm_cmplx_mag_f32(combinedData, frequencyMag, AUDIO_FRAME_LENGTH/2);	
 
-	audioStatsPower(micOneFFTdata, FFT_LENGTH, &(results->power));
-	audioStatsMean(micOneFFTdata, FFT_LENGTH, &(results->mean));
-	audioStatsVariance(micOneFFTdata, FFT_LENGTH, &(results->variance));
+	audioStatsPower(frequencyMag, AUDIO_FRAME_LENGTH/2, &(results->power));
+	audioStatsMean(frequencyMag, AUDIO_FRAME_LENGTH/2, &(results->mean));
+	audioStatsVariance(frequencyMag, AUDIO_FRAME_LENGTH/2, &(results->variance));
 
 	audioStatsStdDev(results->variance, &(results->stdDev));
-	audioStatsSkewness(micOneFFTdata, results->mean, results->stdDev, FFT_LENGTH, &(results->skew));
-	audioStatsKurtosis(micOneFFTdata, results->mean, results->stdDev, FFT_LENGTH, &(results->kurtosis));
+	audioStatsSkewness(frequencyMag, results->mean, results->stdDev, AUDIO_FRAME_LENGTH/2, &(results->skew));
+	audioStatsKurtosis(frequencyMag, results->mean, results->stdDev, AUDIO_FRAME_LENGTH/2, &(results->kurtosis));
 
-	micOneFFTdata[0] = 0;
-	micOneFFTdata[1] = 0;
+	// Remove DC Component
+	frequencyMag[0] = 0.0
 	for (i = 0; i < NUM_FREQUENCIES; i++) {
 		// Get peak frequency
-		arm_max_f32(micOneFFTdata, FFT_LENGTH, &temp, &(results->maxFrequencies[i]));
+		arm_max_f32(frequencyMag, AUDIO_FRAME_LENGTH/2, &temp, &(results->maxFrequencies[i]));
 		// Set that bin to 0
-		micOneFFTdata[results->maxFrequencies[i]] = 0.0;
+		frequencyMag[results->maxFrequencies[i]] = 0.0;
 	}
 
 #ifdef DEBUG_PINS
