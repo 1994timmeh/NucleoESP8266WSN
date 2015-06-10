@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#define MASTERNODE
+//#define MASTERNODE
 
 #ifndef MASTERNODE
     #define NODE_ID 1
