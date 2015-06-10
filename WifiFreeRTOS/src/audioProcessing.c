@@ -117,7 +117,7 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 
 #ifdef DEBUG_PINS
 	HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, 0x00);
-	HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x01);
+	//HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x01);
 #endif /* DEBUG PINS */
 
 	arm_cmplx_mag_f32(combinedData, micOneFFTdata, FFT_LENGTH);	
@@ -130,6 +130,8 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	audioStatsSkewness(micOneFFTdata, results->mean, results->stdDev, FFT_LENGTH, &(results->skew));
 	audioStatsKurtosis(micOneFFTdata, results->mean, results->stdDev, FFT_LENGTH, &(results->kurtosis));
 
+	micOneFFTdata[0] = 0;
+	micOneFFTdata[1] = 0;
 	for (i = 0; i < NUM_FREQUENCIES; i++) {
 		// Get peak frequency
 		arm_max_f32(micOneFFTdata, FFT_LENGTH, &temp, &(results->maxFrequencies[i]));
@@ -138,7 +140,11 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	}
 
 #ifdef DEBUG_PINS
-	HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x00);
+	//HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x00);
+	if (consecutiveFrame) {
+		HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x01);
+		HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x00);
+	}
 #endif /* DEBUG PINS */
 
 	// Populate remaining result structure
