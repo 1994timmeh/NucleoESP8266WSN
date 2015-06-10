@@ -190,7 +190,7 @@ function startTCPAction() {
 		//nothing
 	});
 	// start polling
-	setInterval(pollForCars, 100);
+	setInterval(pollForCars, 2000);
 }
 
 

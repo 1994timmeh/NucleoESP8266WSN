@@ -70,9 +70,11 @@ def handleFrame(frameNum, frameDataDecoded, f, node_ID):
     validFrame = frameData[0]
     print("validFrame: " + str(frameData[0]));
     
-    if frameData[1] > 2147483647: #this is a hack
-        maxBin = -1*(2147483647*2 - frameData[1])
+#    if frameData[1] > 2147483647: #this is a hack
+#        maxBin = -1*(2147483647*2 - frameData[1])
 
+	if frameData[1] & 0x80000000:
+		 maxBin = -1*(frameData[1] & 0x7FFFFFFF)
     else:
         maxBin = frameData[1]
     print("maxBin: " + str(maxBin));
@@ -135,9 +137,9 @@ def handleFrame(frameNum, frameDataDecoded, f, node_ID):
     # Kurtosis = kurtosis,
     # Node_ID = node_ID)
     #   frame.save()
-    nodemeasurement = processing.Measurement(int(maxBin), maxFrequencies, maxValue, power, mean, variance, skew, kurtosis)
-    print("<processing here> Node_ID: " + str(node_ID))
-    return nodemeasurement
+    # nodemeasurement = processing.Measurement(int(maxBin), maxFrequencies, maxValue, power, mean, variance, skew, kurtosis)
+    # print("<processing here> Node_ID: " + str(node_ID))
+    # return nodemeasurement
 
 
 # TODO move this hack elsewhere
@@ -156,17 +158,17 @@ def tcp_client_thread():
 
     #setup processing environment
     nodes = Node.objects.all()
-    node1 = processing.Node(nodes[0].latitude, node[0].longitude, 43, 0.3, 48e3)
-    node2 = processing.Node(nodes[1].latitude, node[1].longitude, 43, 0.3, 48e3)
+    # node1 = processing.Node(nodes[0].latitude, node[0].longitude, 43, 0.3, 48e3)
+    # node2 = processing.Node(nodes[1].latitude, node[1].longitude, 43, 0.3, 48e3)
 
-    deployment = processing.Deployment(node1, node2,  50)
-    deployment.resetKalman(nodes[0].latitude, nodes[1].longitude, 0, 0)
+    # deployment = processing.Deployment(node1, node2,  50)
+    # deployment.resetKalman(nodes[0].latitude, nodes[1].longitude, 0, 0)
 
     lastFrameComplete = -1;
 
     while(True):
         data = sock.recv(1000)
-        node_ID = int(data[5])
+        node_ID = 0 #int(data[5])
         print("----------------------------------------------------------")
         print(data)
         print("-----------------------------------------------------------")
@@ -175,8 +177,16 @@ def tcp_client_thread():
         print("-----------------------------------------------------------")
         #node = int(data[5])
         #print("NODE_ID: " + str(node))
-        decoded = base64.b64decode(data)
-        print(decoded)
+        decoded = "failed"
+        try:
+        	decoded = base64.b64decode(data)
+        	print("endoded length: " + str(len(data)))
+        except:
+        	print("##################DECODE FAILED###############")
+        	print("endoded length: " + str(len(data)))
+        	print("decoded length: " + str(len(decoded)))
+        	print(decoded)
+        	continue
         frameData = []
         frameNum = 0
         word = 0
@@ -189,7 +199,7 @@ def tcp_client_thread():
             elif node_ID == 1:
                 node1measurements.append(handleFrame(a, decoded[51*a:51*a+51], f, node_ID))
             else:
-                printf("INVALID NODE_ID: " + str(node_ID))
+                print("INVALID NODE_ID: " + str(node_ID))
             
 
         # find two  
