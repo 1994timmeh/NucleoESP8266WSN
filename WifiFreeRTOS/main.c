@@ -59,7 +59,7 @@ QueueHandle_t validDataQueue;
 
 TaskHandle_t AudioTaskHandle;
 
-//#define MASTERNODE
+#define MASTERNODE
 
 /**
   * @brief  Starts all the other tasks, then starts the scheduler.
@@ -136,10 +136,17 @@ void Audio_Task( void ) {
 
 			// Give this frame a number
 			results.frameNo = frameNumber++;
-			debug_printf("%d\n", results.maxBin);
+			//debug_printf("MaxBin %d\n", results.maxBin);
+//
+//			int i = 0;
+//			for(i = 0; i < 256; i++){
+//				debug_printf("%d %d\n", (int)ready_data1[i], (int)ready_data2[i]);
+//			}
+//			debug_printf("========NEWFRAME=======\n\n\n\n");
+
 
 			if(results.validFrame){
-				//print_results(results);
+				print_results(results);
 				if(xQueueSendToBack(validDataQueue, (void *)&results, 1) == pdFALSE) {
 					//debug_printf("validFrame queue is full\n");
 				}
@@ -454,7 +461,7 @@ void DMACompleteISR1( void ){
 		int i = 0;
 		float32_t median = (max1-min1) + min1;
 		for(i = 0; i < 256; i++){
-			ready_data1[i] = (data1[i]-median)/10;
+			ready_data1[i] = (data1[i]);
 		}
 		sampleNo1 = 0;
 		max1 = 0;
@@ -482,7 +489,7 @@ void DMACompleteISR2( void ){
 		int i = 0;
 		float32_t median = (max2-min2) + min2;
 		for(i = 0; i < 256; i++){
-			ready_data2[i] = (data2[i]-median)/10;
+			ready_data2[i] = (data2[i]);
 		}
 		sampleNo2 = 0;
 		max2 = 0;
