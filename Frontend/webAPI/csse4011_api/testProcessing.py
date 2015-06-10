@@ -39,7 +39,7 @@ def simulation(deployment, node1, node2):
 	t = 0.0
 	n = 0
 
-	with open('inputDataset.csv', 'wb') as csvfile:
+	with open ('inputDataset.csv', 'wb') as csvfile:
 		writer = csv.writer(csvfile, delimiter=',',quoting=csv.QUOTE_MINIMAL)
 
 		while (distanceTraveled < distanceToTravel):
@@ -56,7 +56,7 @@ def simulation(deployment, node1, node2):
 			node1measurement = processing.Measurement(int(node1shift), [0,0,0,0,0], 0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
 			node2measurement = processing.Measurement(int(node2shift), [0,0,0,0,0], 0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
 
-			res = deployment.processFrame(node1measurement, node2measurement)
+			res = deployment.processFrame(node1measurement, node2measurement, 1)
 
 			if (res.valid):
 				rawLocations = np.concatenate((rawLocations, [[res.raw.lon, res.raw.lat]]), axis=0)
@@ -68,7 +68,8 @@ def simulation(deployment, node1, node2):
 
 
 
-			writer.writerow([node1shift, 5,4,3,2,1, 0.0, velocity, 1.0, 1.0, 1.0, 1.0, n])
+			writer.writerow([node1shift, 5,4,3,2,1, 0.0, velocity, 1.0, 1.0, 1.0, 1.0, n, 0])
+			writer.writerow([node2shift, 5,4,3,2,1, 0.0, velocity, 1.0, 1.0, 1.0, 1.0, n, 1])
 
 			locations = np.concatenate((locations, [[carLocation.lon, carLocation.lat]]), axis=0)
 			distanceTraveled = distanceTraveled + (velocity*deltaT)
@@ -83,9 +84,9 @@ def simulation(deployment, node1, node2):
 	# Plot simulated trajectory
 	plt.scatter(locations[:,0], locations[:,1],s=10, c='k', edgecolors='none', alpha=0.5, marker='o', label="true location")
 	# Plot detected audio
-	plt.scatter(rawLocations[:,0], rawLocations[:,1],s=10, c='g', edgecolors='none', alpha=0.5, marker='o', label="raw detected locations")
+	#plt.scatter(rawLocations[:,0], rawLocations[:,1],s=10, c='g', edgecolors='none', alpha=0.5, marker='o', label="raw detected locations")
 	# Plot filtered locations
-	plt.scatter(filteredLocations[:,0], filteredLocations[:,1],s=10, c='r', edgecolors='none', alpha=0.5, marker='o', label="filtered locations")
+	#plt.scatter(filteredLocations[:,0], filteredLocations[:,1],s=10, c='r', edgecolors='none', alpha=0.5, marker='o', label="filtered locations")
 
 	# Plot node locations
 	plt.scatter(node1.location.lon, node1.location.lat, s = 50, c='r', marker='x')
@@ -97,13 +98,38 @@ def simulation(deployment, node1, node2):
 	plt.scatter(node2mic1.lon, node2mic1.lat, s = 20, c='r', marker='+')
 	plt.scatter(node2mic2.lon, node2mic2.lat, s = 20, c='r', marker='+')
 
-	# Plott start and end points
+	# Plot start and end points
 	plt.scatter(start.lon, start.lat, s = 50, c='b', marker='x')
 	plt.scatter(end.lon, end.lat, s = 50, c='b', marker='x')
 
 	# Lock 1:1 aspect ratio
 	plt.axes().set_aspect('equal', adjustable='box')
+	plt.xlim(end.lon - 0.0001, start.lon + 0.0001)
+	plt.ylim(end.lat - 0.0001, start.lat + 0.0001)
+	plt.title('Simulation Ground Truth')
+	plt.show()
+	# Plot node locations
+	plt.scatter(node1.location.lon, node1.location.lat, s = 50, c='r', marker='x')
+	plt.scatter(node2.location.lon, node2.location.lat, s = 50, c='r', marker='x')
+	plt.scatter(start.lon, start.lat, s = 50, c='b', marker='x')
+	plt.scatter(end.lon, end.lat, s = 50, c='b', marker='x')
+	plt.axes().set_aspect('equal', adjustable='box')
+	plt.scatter(rawLocations[:,0], rawLocations[:,1],s=10, c='g', edgecolors='none', alpha=0.5, marker='o', label="raw detected locations")
+	plt.xlim(end.lon - 0.0001, start.lon + 0.0001)
+	plt.ylim(end.lat - 0.0001, start.lat + 0.0001)
+	plt.title('Simulation Raw Locations')
+	plt.show()
 
+	# Plot node locations
+	plt.scatter(node1.location.lon, node1.location.lat, s = 50, c='r', marker='x')
+	plt.scatter(node2.location.lon, node2.location.lat, s = 50, c='r', marker='x')
+	plt.scatter(start.lon, start.lat, s = 50, c='b', marker='x')
+	plt.scatter(end.lon, end.lat, s = 50, c='b', marker='x')
+	plt.axes().set_aspect('equal', adjustable='box')
+	plt.scatter(filteredLocations[:,0], filteredLocations[:,1],s=10, c='r', edgecolors='none', alpha=0.5, marker='o', label="filtered locations")
+	plt.xlim(end.lon - 0.0001, start.lon + 0.0001)
+	plt.ylim(end.lat - 0.0001, start.lat + 0.0001)
+	plt.title('Simulation Filtered Locations')
 	plt.show()
 
 	plt.figure()
@@ -111,10 +137,12 @@ def simulation(deployment, node1, node2):
 	plt.title('Simulation: Error against Time')
 	plt.xlabel('Time (s)')
 	plt.ylabel('Error - Unfiltered (m)')
+	plt.ylim(0, 20)
 	plt.plot(rawTimeError[:,0], rawTimeError[:,1])
 	plt.subplot(212)
 	plt.xlabel('Time (s)')
 	plt.ylabel('Error - Kalman Filtered (m)')
+	plt.ylim(0, 20)
 	plt.plot(filteredTimeError[:,0], filteredTimeError[:,1])
 	plt.show()
 
@@ -124,10 +152,12 @@ def simulation(deployment, node1, node2):
 	plt.xlabel('Distance (m)')
 	plt.ylabel('Error - Unfiltered (m)')
 	plt.scatter(rawDistError[:,0], rawDistError[:,1])
+	plt.ylim(0, 20)
 	plt.subplot(212)
 	plt.xlabel('Distance (m)')
 	plt.ylabel('Error - Kalman Filtered (m)')
 	plt.scatter(filteredDistError[:,0], filteredDistError[:,1])
+	plt.ylim(0, 20)
 	plt.show()
 
 
@@ -136,6 +166,5 @@ node2 = processing.Node(-27.499655, 153.010045, 43, 0.3, 48e3)
 
 deployment = processing.Deployment(node1, node2,  50)
 deployment.resetKalman(-27.499543, 153.009910, 270, 10)
-
 
 simulation(deployment, node1, node2)

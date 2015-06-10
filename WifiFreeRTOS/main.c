@@ -59,6 +59,8 @@ QueueHandle_t validDataQueue;
 
 TaskHandle_t AudioTaskHandle;
 
+//#define MASTERNODE
+
 /**
   * @brief  Starts all the other tasks, then starts the scheduler.
   * @param  None
@@ -114,6 +116,7 @@ float32_t test2[] = {0.63577,1.0957,-1.7048,-0.43299,-0.35294,-0.0011875,0.46182
   */
 void Audio_Task( void ) {
 	__BRD_D4_GPIO_CLK();
+	__BRD_D5_GPIO_CLK();
 	GPIO_InitTypeDef  GPIO_InitStructure;
 
 	GPIO_InitStructure.Pin = BRD_D4_PIN;				//Pin
@@ -122,22 +125,23 @@ void Audio_Task( void ) {
 	GPIO_InitStructure.Speed = GPIO_SPEED_FAST;			//Pin latency
 	HAL_GPIO_Init(BRD_D4_GPIO_PORT, &GPIO_InitStructure);	//Initialise Pin
 
-	vTaskSuspend(NULL);
+	//vTaskSuspend(NULL);
 	for (;;) {
 		struct frameResults results;
 		if(xSemaphoreTake(processing_Semaphore, 1) == pdTRUE) {
+
 			HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, 1);
 			audioProcessFrame(ready_data1, ready_data2, &results);
+			HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, 0);
 			// Give this frame a number
 			results.frameNo = frameNumber++;
 
 			if(results.validFrame){
-				print_results(results);
-				if(xQueueSendToBack(validDataQueue, (void *)&results, 1) == pdFALSE){
-					debug_printf("validFrame queue is full\n");
+				//print_results(results);
+				if(xQueueSendToBack(validDataQueue, (void *)&results, 1) == pdFALSE) {
+					//debug_printf("validFrame queue is full\n");
 				}
 			}
-			HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, 0);
 		}
 	}
 }
@@ -155,7 +159,7 @@ void TX_Task( void ){
 
 	int seq = 0;
 	vTaskDelay(1000);
-	ESP8622_init(230400);
+	ESP8622_init(115200);
 
 	Wifi_setmode();
 
@@ -178,8 +182,17 @@ void TX_Task( void ){
 		Wifi_enserver();
 	#endif
 
+	struct frameResults results;
+
+	GPIO_InitTypeDef  GPIO_InitStructure;
+
+	GPIO_InitStructure.Pin = BRD_D5_PIN;				//Pin
+	GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;		//Output Mode
+	GPIO_InitStructure.Pull = GPIO_PULLDOWN;			//Enable Pull up, down or no pull resister
+	GPIO_InitStructure.Speed = GPIO_SPEED_FAST;			//Pin latency
+	HAL_GPIO_Init(BRD_D5_GPIO_PORT, &GPIO_InitStructure);	//Initialise Pin
+
 	for(;;) {
-		struct frameResults results;
 		if (xQueueReceive( validDataQueue, &results, 1)) {
 			if(string_len < 350){ //65 bytes for an encoded packet + 5 buffer len = 4(n/3)
 				serialize_results(&results, &(data[string_len]));
@@ -192,6 +205,8 @@ void TX_Task( void ){
 				int data_len = sprintf(buffer, PACKETFORMAT, 0, NODE_ID, 5, b64_data);
 				debug_printf("Sending data of length: %d\n", data_len);
 				Wifi_senddata(0, buffer, data_len);
+				HAL_GPIO_WritePin(BRD_D5_GPIO_PORT, BRD_D5_PIN, 1);
+				HAL_GPIO_WritePin(BRD_D5_GPIO_PORT, BRD_D5_PIN, 0);
 
 				//Clean up for next time
 				reading_count = 0;
@@ -200,6 +215,7 @@ void TX_Task( void ){
 				memset(data, 0, 500);
 				memset(b64_data, 0, 500);
 			}
+
 		}
 	}
 }

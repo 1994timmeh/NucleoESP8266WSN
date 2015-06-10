@@ -15,11 +15,12 @@
 #define FALSE 0
 
 #define USART_TX_TASK_PRIORITY					( tskIDLE_PRIORITY + 2 )
-#define USART_TX_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 15 )
+#define USART_TX_TASK_STACK_SIZE		( configMINIMAL_STACK_SIZE * 18 )
 
 UART_HandleTypeDef UART_Handler;
 DMA_HandleTypeDef hdma_tx;
 QueueHandle_t Data_Queue;	/* Queue used */
+
 QueueHandle_t Data_Queue;	/* Queue used */
 
 SemaphoreHandle_t USART1_Semaphore;
@@ -154,7 +155,7 @@ void dma_Init(void) {
 	  NVIC_SetVector(DMA2_Stream7_IRQn, (uint32_t)&UART1_DMA_TX_IRQHandler);
 
 	  /* initialise UART_Buffer	*/
-	  uart_tx_buffer = pvPortMalloc(sizeof(uint8_t)* 500);
+	  uart_tx_buffer = pvPortMalloc(sizeof(uint8_t)*500);
 	  //HAL_UART_Transmit(&UART_Handler, "asd", 3, 10);
 	  //esp_send("test");
 
@@ -169,14 +170,15 @@ void dma_Init(void) {
  * Task for processing UART data and adding new data to a data queue
  */
 void UART_Processor( void ){
-  char new_data[500];
+  char new_data[600];
 
   for(;;){
-      if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r' && new_data != NULL){
-        debug_printf("LINE RX: %s\n", new_data);
+      if(xQueueReceive(Data_Queue, &new_data, 10) && new_data[0] != '\r'){
+        //debug_printf("LINE RX: %s\n", new_data);
         //We have new data analyze it
         if( strncmp(&(new_data[0]), "+IPD", 4 ) == 0) {
 			BRD_LEDToggle();
+			debug_printf("\n");
 			handle_data(new_data+5);
 
         } else if( strncmp(&(new_data[0]), "SEND OK", 7) == 0 ) {
@@ -228,11 +230,17 @@ void UART1_IRQHandler(void)
     	if (c != '\n' && c != '\r' && line_buffer_index < 499) {
     		line_buffer[line_buffer_index] = c;
     		line_buffer_index++;
-    	} else if (index != 0) {
-    			xQueueSendToBackFromISR(Data_Queue, line_buffer, ( BaseType_t* ) 4 );
-    			// clear line buffer
-    			memset(line_buffer, 0, 500);
-    			line_buffer_index = 0;
+    	} else if (line_buffer_index != 0) {
+			xQueueSendToBackFromISR(Data_Queue, line_buffer, ( BaseType_t* ) 4 );
+//			int i = 0;
+//			for(; i < strlen(line_buffer); i++){
+//				debug_printf("%c", line_buffer[0]);
+//			}
+
+			// clear line buffer
+			//debug_printf("Got %d chars\n", line_buffer_index);
+			memset(line_buffer, 0, 500);
+			line_buffer_index = 0;
     	}
     } else {	// cleanup other flags
     	HAL_UART_IRQHandler((UART_HandleTypeDef *)&UART_Handler);
@@ -305,9 +313,9 @@ void handle_data(char* data) {
 	sscanf(data, "%[^,],%[^:]:%s", pipestr, lengthstr, message);
 	pipe_no = atoi(pipestr);
 	length = atoi(lengthstr);
-	raw_message = strcpy(raw_message, message);
+	strcpy(raw_message, message);
 
-	debug_printf("Received data! Pipe=%d, length=%d, message=%s\n", pipe_no, length, message);
+	//debug_printf("Received data! Pipe=%d, length=%d, message=%s\n", pipe_no, length, message);
 	if(strncmp(message, "TS:[", 4) == 0){
 		char new_time[10];
 		sscanf(message, "TS:[%[^]]]", new_time);
@@ -315,15 +323,15 @@ void handle_data(char* data) {
 	} else if(strncmp(message, "TE:[", 4) == 0){
 		debug_printf("Message received: %s\n", message + 4);
 	} else if(strncmp(message, "DA:[", 4) == 0){
-		debug_printf("Data received: %s\n", message + 4);
+		debug_printf("Data received\n");
 		handle_Messages(pipe_no, message + 4, raw_message);
 	} else if(strncmp(message, "RG:[", 4) == 0){
 		debug_printf("Got registration command\n");
 		#ifdef MASTERNODE
 			debug_printf("Updating all frame numbers\n");
-			Wifi_senddata(0, "RG:[0]", 6);
-			Wifi_senddata(1, "RG:[0]", 6);
-			Wifi_senddata(2, "RG:[0]", 6);
+//			Wifi_senddata(0, "RG:[0]", 6);
+//			Wifi_senddata(1, "RG:[0]", 6);
+//			Wifi_senddata(2, "RG:[0]", 6);
 		#else
 			char frame[10];
 			sscanf(message, "RG:[%[^]]]", frame);
@@ -367,8 +375,10 @@ void handle_Messages(uint8_t pipe_no, uint8_t* message, uint8_t* raw_data) {
 
 	// Data for client
 	if (dest == 0){
-		debug_printf("FORWARDING: %d\n", raw_data);
-		Wifi_senddata(client_Pipe, raw_data, strlen(raw_data));
+		if(client_Pipe != -1) {
+			debug_printf("FORWARDING %d bytes\n", strlen(raw_data));
+			Wifi_senddata(client_Pipe, raw_data, strlen(raw_data));
+		}
 	}
 	vPortFree(data_String);
 }
@@ -466,10 +476,10 @@ void Wifi_join(char* SSID, char* password){
 
   //HAL_UART_Transmit(&UART_Handler, &(command[0]), len, 10);
   esp_send(( uint8_t* )command);
-  waitForPassed(50000);
+  waitForPassed(5000);
 		}
-			xSemaphoreGive(esp_Semaphore);
-			}
+	xSemaphoreGive(esp_Semaphore);
+	}
 }
 
 /* Currently sets mode to 3 -Both AP and ST) */
@@ -507,8 +517,8 @@ void Wifi_listAPs(){
 
   vTaskDelay(1000);
 		}
-			xSemaphoreGive(esp_Semaphore);
-			}
+	xSemaphoreGive(esp_Semaphore);
+	}
 }
 
 /* Sends the status command

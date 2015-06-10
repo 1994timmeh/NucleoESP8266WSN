@@ -29,6 +29,7 @@ SRCS += $(FREERTOS_PATH)/*.c $(FREERTOS_PATH)/portable/GCC/ARM_CM4F/*.c $(FREERT
 
 SRCS += $(DSP_PATH)/ComplexMathFunctions/arm_cmplx_mult_cmplx_f32.c
 SRCS += $(DSP_PATH)/ComplexMathFunctions/arm_cmplx_mag_f32.c
+SRCS += $(DSP_PATH)/ComplexMathFunctions/arm_cmplx_conj_f32.c
 
 SRCS += $(DSP_PATH)/CommonTables/*.c
 

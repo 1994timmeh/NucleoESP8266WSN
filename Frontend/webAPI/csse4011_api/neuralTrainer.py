@@ -47,9 +47,9 @@ for inputData, expectedOutput in ds:
 	else:
 		validation[expectedOutput][output] = validation[expectedOutput][output] + 1
 
+
 print validation
 print "Errors: " + str(classificiationErrors)
-
 
 quit()
 
