@@ -89,8 +89,8 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	arm_rfft_fast_f32(&fftStructures, micTwoFFTdata, micTwoFFT, ifftFlag);
 
 	// Multiply
-	arm_cmplx_conj_f32(micOneFFT, micOneFFT, AUDIO_FRAME_LENGTH/2);
-	micOneFFT[1] = -micOneFFT[1];	
+//	arm_cmplx_conj_f32(micOneFFT, micOneFFT, AUDIO_FRAME_LENGTH/2);
+//	micOneFFT[1] = -micOneFFT[1];
 
 	arm_cmplx_mult_cmplx_f32(micOneFFT, micTwoFFT, combinedData, AUDIO_FRAME_LENGTH/2);
 	// Because first complex byte contains two packed real values
@@ -137,7 +137,7 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	audioStatsKurtosis(frequencyMag, results->mean, results->stdDev, AUDIO_FRAME_LENGTH/2, &(results->kurtosis));
 
 	// Remove DC Component
-	frequencyMag[0] = 0.0
+	frequencyMag[0] = 0.0;
 	for (i = 0; i < NUM_FREQUENCIES; i++) {
 		// Get peak frequency
 		arm_max_f32(frequencyMag, AUDIO_FRAME_LENGTH/2, &temp, &(results->maxFrequencies[i]));
