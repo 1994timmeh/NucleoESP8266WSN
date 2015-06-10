@@ -196,6 +196,15 @@ def tcp_client_thread():
         print("node0measurements - length: " + str(len(node0measurements)))
         print("node1measurements - length: " + str(len(node1measurements)))
 
+        #find next frame to process in node0measuermens
+        #find comparable frame in node1measurements
+        	#if can find comparable
+        		#process
+        	#else
+        		#lastFrameComplete++
+        
+
+
         
         
     f.close()
