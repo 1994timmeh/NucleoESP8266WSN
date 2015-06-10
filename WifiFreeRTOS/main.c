@@ -59,6 +59,8 @@ QueueHandle_t validDataQueue;
 
 TaskHandle_t AudioTaskHandle;
 
+#define MASTERNODE
+
 /**
   * @brief  Starts all the other tasks, then starts the scheduler.
   * @param  None
@@ -126,18 +128,21 @@ void Audio_Task( void ) {
 	for (;;) {
 		struct frameResults results;
 		if(xSemaphoreTake(processing_Semaphore, 1) == pdTRUE) {
-			HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, 1);
+
 			audioProcessFrame(ready_data1, ready_data2, &results);
 			// Give this frame a number
 			results.frameNo = frameNumber++;
 
+			HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, 1);
 			if(results.validFrame){
-				print_results(results);
-				if(xQueueSendToBack(validDataQueue, (void *)&results, 1) == pdFALSE){
+
+				//print_results(results);
+				if(xQueueSendToBack(validDataQueue, (void *)&results, 1) == pdFALSE) {
 					debug_printf("validFrame queue is full\n");
 				}
 			}
 			HAL_GPIO_WritePin(BRD_D4_GPIO_PORT, BRD_D4_PIN, 0);
+
 		}
 	}
 }
@@ -155,7 +160,7 @@ void TX_Task( void ){
 
 	int seq = 0;
 	vTaskDelay(1000);
-	ESP8622_init(230400);
+	ESP8622_init(115200);
 
 	Wifi_setmode();
 
@@ -178,8 +183,9 @@ void TX_Task( void ){
 		Wifi_enserver();
 	#endif
 
+	struct frameResults results;
+
 	for(;;) {
-		struct frameResults results;
 		if (xQueueReceive( validDataQueue, &results, 1)) {
 			if(string_len < 350){ //65 bytes for an encoded packet + 5 buffer len = 4(n/3)
 				serialize_results(&results, &(data[string_len]));

@@ -123,7 +123,7 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 
 #ifdef DEBUG_PINS
 	HAL_GPIO_WritePin(BRD_D8_GPIO_PORT, BRD_D8_PIN, 0x00);
-	HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x01);
+	//HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x01);
 #endif /* DEBUG PINS */
 
 	arm_cmplx_mag_f32(combinedData, frequencyMag, AUDIO_FRAME_LENGTH/2);	
@@ -146,7 +146,11 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	}
 
 #ifdef DEBUG_PINS
-	HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x00);
+	//HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x00);
+	if (consecutiveFrame) {
+		HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x01);
+		HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x00);
+	}
 #endif /* DEBUG PINS */
 
 	// Populate remaining result structure
