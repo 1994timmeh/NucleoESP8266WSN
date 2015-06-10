@@ -3,25 +3,24 @@ import sys
 import base64
 import datetime
 import math
+import time
 
 
-# f = open('frameSave','w')
-#     f.write('hi there\n') # python will convert \n to os.linesep
-#     f.close()
+f = open('./logs/framesLog_' + str(int(time.time())) + '.csv','w')
 
-def handleFrame(frameNum, frameData):
+def handleFrame(frameNum, frameDataDecoded):
     frameData = []
     word = 0
     for i in range(0, 51):
-        print(str(i) + ": " + str(decoded[i]))
+        print(str(i) + ": " + str(frameDataDecoded[i]))
         if i  == 0:
-            frameData.append(decoded[i])
+            frameData.append(frameDataDecoded[i])
         else:
             if (i-1) % 4 == 0 and i > 1:
                 frameData.append(word)
                 word = 0;
     
-            word += decoded[i] << ((i-1) % 4)*8
+            word += frameDataDecoded[i] << ((i-1) % 4)*8
     frameData.append(word)    
         
     for a in range(0, 14):
@@ -63,11 +62,20 @@ def handleFrame(frameNum, frameData):
     
     frameNumNode = frameData[13]
     print("frameNumNode: " + str(frameNumNode))
-     # you can omit in most cases as the destructor will call if
-#     for c in range(8, 8+6):
-#         sign = 0x80000000 & frameData[c]
-#         exponent = 0x7F800000 & frameData[c]
-#         fraction = 0x000
+
+    f.write(str(maxBin) + ',' +
+        str(maxFrequencies[0]) + ',' +
+        str(maxFrequencies[1]) + ',' +
+        str(maxFrequencies[2]) + ',' +
+        str(maxFrequencies[3]) + ',' +
+        str(maxFrequencies[4]) + ',' +
+        str(maxValue) + ',' +
+        str(power) + ',' +
+        str(mean) + ',' +
+        str(variance) + ',' +
+        str(skew) + ',' +
+        str(kurtosis) +
+          '\n')
 
 
 
@@ -104,3 +112,4 @@ while(True):
     #     
     
     
+f.close()
