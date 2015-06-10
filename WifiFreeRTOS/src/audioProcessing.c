@@ -10,15 +10,15 @@
 #define AUDIODEBUG
 #define DEBUG_PINS
 
+void arm_real(float32_t* pSrc, float32_t* pDst, uint32_t blockSize);
 void arm_copy_complex(float32_t* pSrc, float32_t* pDst, uint32_t blockSize);
 
 // FFT Arrays
-float32_t micOneFFTdata[AUDIO_FRAME_LENGTH];
-float32_t micTwoFFTdata[AUDIO_FRAME_LENGTH];
-float32_t micOneFFT[AUDIO_FRAME_LENGTH];
-float32_t micTwoFFT[AUDIO_FRAME_LENGTH];
-float32_t combinedData[AUDIO_FRAME_LENGTH];
+float32_t micOneFFTdata[2*AUDIO_FRAME_LENGTH];
+float32_t micTwoFFTdata[2*AUDIO_FRAME_LENGTH];
+float32_t combinedData[2*AUDIO_FRAME_LENGTH];
 float32_t xcorr[AUDIO_FRAME_LENGTH];
+
 float32_t frequencyMag[AUDIO_FRAME_LENGTH];
 
 // FFT Variables
@@ -31,7 +31,7 @@ int32_t pastBins[SLIDING_WINDOW_LENGTH];
 void audioProcessingInit(void) {
 	GPIO_InitTypeDef  GPIO_InitStructure;
 	uint8_t i;
-	arm_rfft_fast_init_f32(&fftStructures, AUDIO_FRAME_LENGTH);
+	//arm_rfft_fast_init_f32(&fftStructures, AUDIO_FRAME_LENGTH);
 
 	for (i = 0; i < SLIDING_WINDOW_LENGTH; i++) {
 		pastBins[i] = 2*AUDIO_FRAME_LENGTH;
@@ -76,32 +76,32 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 #endif /* DEBUG PINS */
 
 	// Initialise both data sequences as 0.0
-	arm_fill_f32(0.0, micOneFFTdata, AUDIO_FRAME_LENGTH);
-	arm_fill_f32(0.0, micTwoFFTdata, AUDIO_FRAME_LENGTH);
+	arm_fill_f32(0.0, micOneFFTdata, 2*AUDIO_FRAME_LENGTH);
+	arm_fill_f32(0.0, micTwoFFTdata, 2*AUDIO_FRAME_LENGTH);
 
 	// Fill both data arrays with audio data, mic two data is reversed
-	arm_copy_f32(micOneData, micOneFFTdata, AUDIO_FRAME_LENGTH);
-	arm_copy_f32(micTwoData, micTwoFFTdata, AUDIO_FRAME_LENGTH);
+	arm_copy_complex(micOneData, micOneFFTdata, AUDIO_FRAME_LENGTH);
+	arm_copy_complex(micTwoData, micTwoFFTdata, AUDIO_FRAME_LENGTH);
 
 	// Perform complex fft on mic data
 	ifftFlag = 0;
-	arm_rfft_fast_f32(&fftStructures, micOneFFTdata, micOneFFT, ifftFlag);
-	arm_rfft_fast_f32(&fftStructures, micTwoFFTdata, micTwoFFT, ifftFlag);
+	arm_cfft_f32(&arm_cfft_sR_f32_len256, micOneFFTdata, ifftFlag, doBitReverse);
+	arm_cfft_f32(&arm_cfft_sR_f32_len256, micTwoFFTdata, ifftFlag, doBitReverse);
 
 	// Multiply
-//	arm_cmplx_conj_f32(micOneFFT, micOneFFT, AUDIO_FRAME_LENGTH/2);
-//	micOneFFT[1] = -micOneFFT[1];
+	arm_cmplx_conj_f32(micOneFFTdata, micOneFFTdata, AUDIO_FRAME_LENGTH);
+	arm_cmplx_mult_cmplx_f32(micOneFFTdata, micTwoFFTdata, combinedData, AUDIO_FRAME_LENGTH);
 
-	arm_cmplx_mult_cmplx_f32(micOneFFT, micTwoFFT, combinedData, AUDIO_FRAME_LENGTH/2);
-	// Because first complex byte contains two packed real values
-	combinedData[0] = micOneFFT[0] * micTwoFFT[0];
-	combinedData[1] = micOneFFT[1] * micTwoFFT[1];
+	// Get magnitude for later
+ 	arm_cmplx_mag_f32(combinedData, frequencyMag, AUDIO_FRAME_LENGTH);
 
 	// Perform IFFT
 	ifftFlag = 1;
-	arm_rfft_fast_f32(&fftStructures, combinedData, xcorr, ifftFlag);
+	arm_cfft_f32(&arm_cfft_sR_f32_len256, combinedData, ifftFlag, doBitReverse);
 
-	// Find maximum  correlation points
+	arm_real(combinedData, xcorr, AUDIO_FRAME_LENGTH)
+
+	// Find maximum correlation points
 	arm_max_f32(xcorr, AUDIO_FRAME_LENGTH, &maxValue, &maxBin);
 	maxBin = (AUDIO_FRAME_LENGTH/2 - 1) - maxBin;
 
@@ -167,6 +167,32 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 //#endif
 
 	return;
+}
+
+void arm_real(float32_t* pSrc, float32_t* pDst, uint32_t blockSize) {
+	uint32_t blkCnt;
+	float32_t in1, in2, in3, in4;
+	blkCnt = blockSize >> 2u;
+	while(blkCnt > 0u) {
+		/* C = A */
+		/* Copy and then store the results in the destination buffer */
+		in1 = *pSrc++;
+		pSrc++;
+		in2 = *pSrc++;
+		pSrc++;
+		in3 = *pSrc++;
+		pSrc++;
+		in4 = *pSrc++;
+		pSrc++;
+
+		/* Shifting into real array */
+		*(pDst++) = in1;
+		*(pDst++) = in2;
+		*(pDst++) = in3;
+		*(pDst++) = in4;
+		/* Decrement the loop counter */
+		blkCnt--;
+	}
 }
 
 void arm_copy_complex(float32_t* pSrc, float32_t* pDst, uint32_t blockSize) {

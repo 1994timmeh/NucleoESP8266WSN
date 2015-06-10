@@ -23,7 +23,11 @@ class CorrMax(models.Model):
 class VehicleEstimate(models.Model):
 	latitude = models.CharField(max_length=21);
 	longitude = models.CharField(max_length=21);
-	Accuracy = models.FloatField();
+	latitudeFiltered = models.CharField(max_length=21);
+	longitudeFiltered = models.CharField(max_length=21);
+	Valid = models.SmallIntegerField();
+	Type = models.CharField(max_length=20);
+	FrameNum = models.BigIntegerField();
 
 class Frame(models.Model):
 	Node_ID = models.SmallIntegerField();
