@@ -56,7 +56,7 @@ def simulation(deployment, node1, node2):
 			node1measurement = processing.Measurement(int(node1shift), [0,0,0,0,0], 0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
 			node2measurement = processing.Measurement(int(node2shift), [0,0,0,0,0], 0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
 
-			res = deployment.processFrame(node1measurement, node2measurement)
+			res = deployment.processFrame(node1measurement, node2measurement, 1)
 
 			if (res.valid):
 				rawLocations = np.concatenate((rawLocations, [[res.raw.lon, res.raw.lat]]), axis=0)

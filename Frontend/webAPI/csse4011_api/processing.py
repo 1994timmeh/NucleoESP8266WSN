@@ -267,6 +267,9 @@ class Kalman:
         self.Q_k = np.eye(self.ndim)*proc_err
         self.R = np.eye(len(self.H))*meas_err
 
+	def updateDeltaT(self, dt):
+		self.A = np.array([(1, 0, dt, 0), (0, 1, 0, dt), (0, 0, 1, 0), (0, 0, 0, 1)]);
+
     def update(self, obs):
 
         # Make prediction
@@ -326,7 +329,7 @@ class Deployment():
 		self.Kalman = Kalman(x, cov_init, measurementNoise, processNoise, self.deltaT)
 
 	
-	def processFrame(self, node1Measurement, node2Measurement):
+	def processFrame(self, node1Measurement, node2Measurement, framesSinceLast):
 		
 		# Change these when actual feature vector is implemented
 		maxBin1 = node1Measurement.bin
@@ -366,6 +369,7 @@ class Deployment():
 		velocityLon = (intersection.lon - self.Kalman.x_hat[0]) / self.deltaT
 		velocityLat = (intersection.lat - self.Kalman.x_hat[1]) / self.deltaT
 
+		self.Kalman.updateDeltaT(self.deltaT * framesSinceLast)
 		self.Kalman.update([intersection.lon, intersection.lat, velocityLon, velocityLat])
 
 		node1classification = self.classifier.activate(generateFeatureVector(node1Measurement))
