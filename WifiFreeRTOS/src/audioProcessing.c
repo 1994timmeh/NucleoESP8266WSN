@@ -16,6 +16,7 @@ void arm_copy_complex(float32_t* pSrc, float32_t* pDst, uint32_t blockSize);
 // FFT Arrays
 float32_t micOneFFTdata[2*AUDIO_FRAME_LENGTH];
 float32_t micTwoFFTdata[2*AUDIO_FRAME_LENGTH];
+float32_t micOneConj[2*AUDIO_FRAME_LENGTH];
 float32_t combinedData[2*AUDIO_FRAME_LENGTH];
 float32_t xcorr[AUDIO_FRAME_LENGTH];
 
@@ -89,8 +90,8 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	arm_cfft_f32(&arm_cfft_sR_f32_len256, micTwoFFTdata, ifftFlag, doBitReverse);
 
 	// Multiply
-	arm_cmplx_conj_f32(micOneFFTdata, micOneFFTdata, AUDIO_FRAME_LENGTH);
-	arm_cmplx_mult_cmplx_f32(micOneFFTdata, micTwoFFTdata, combinedData, AUDIO_FRAME_LENGTH);
+	arm_cmplx_conj_f32(micOneFFTdata, micOneConj, AUDIO_FRAME_LENGTH);
+	arm_cmplx_mult_cmplx_f32(micOneConj, micTwoFFTdata, combinedData, AUDIO_FRAME_LENGTH);
 
 	// Get magnitude for later
  	arm_cmplx_mag_f32(combinedData, frequencyMag, AUDIO_FRAME_LENGTH);
@@ -99,11 +100,12 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	ifftFlag = 1;
 	arm_cfft_f32(&arm_cfft_sR_f32_len256, combinedData, ifftFlag, doBitReverse);
 
-	arm_real(combinedData, xcorr, AUDIO_FRAME_LENGTH)
+	arm_real(combinedData, xcorr, AUDIO_FRAME_LENGTH);
 
 	// Find maximum correlation points
 	arm_max_f32(xcorr, AUDIO_FRAME_LENGTH, &maxValue, &maxBin);
-	maxBin = (AUDIO_FRAME_LENGTH/2 - 1) - maxBin;
+	maxBin = (maxBin + (AUDIO_FRAME_LENGTH/2)) % AUDIO_FRAME_LENGTH;
+	maxBin = AUDIO_FRAME_LENGTH/2 - maxBin;
 
 	// Compare maximum bin to previous bins
 	consecutiveFrame = 1;
@@ -126,7 +128,7 @@ void audioProcessFrame(float32_t* micOneData, float32_t* micTwoData, struct fram
 	//HAL_GPIO_WritePin(BRD_D9_GPIO_PORT, BRD_D9_PIN, 0x01);
 #endif /* DEBUG PINS */
 
-	arm_cmplx_mag_f32(combinedData, frequencyMag, AUDIO_FRAME_LENGTH/2);	
+	//arm_cmplx_mag_f32(combinedData, frequencyMag, AUDIO_FRAME_LENGTH/2);
 
 	audioStatsPower(frequencyMag, AUDIO_FRAME_LENGTH/2, &(results->power));
 	audioStatsMean(frequencyMag, AUDIO_FRAME_LENGTH/2, &(results->mean));
