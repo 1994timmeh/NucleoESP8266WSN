@@ -86,6 +86,7 @@ function updateNodesList() {
 		$( "#nodesDiv" ).append("Node " + node.Node_ID + ":<br>" +
 								"		Latitude: " + node.latitude + "<br>" +
 								"		Longitude: " + node.longitude + "<br>" +
+								"       Angle: " + node.Angle + "<br>" +
 								"		Active: " + node.active + "<br><br>");
 	});
 }
@@ -122,7 +123,7 @@ var showEstimates = 1;
 var showFilteredEstimates = 1;
 
 
-function pollForCars() {
+function pollForCars() {    // undo this hack
 	$.getJSON( "http://127.0.0.1:8000/csse4011_api/VehicleEstimates/" + lastFrame + "/", addCars);
 }
 
@@ -191,6 +192,7 @@ function startTCPAction() {
 	});
 	// start polling
 	setInterval(pollForCars, 2000);
+	//pollForCars()
 }
 
 

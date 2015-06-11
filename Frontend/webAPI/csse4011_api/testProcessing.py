@@ -2,7 +2,8 @@ import processing
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
-import Image
+#from Pillow import Image
+from models import Node, Signal, CorrMax, Frame, VehicleEstimate
 
 def velocityModel(t):
 	return 100.0 + np.sin(t) #constant velocity
@@ -11,8 +12,8 @@ def simulation(deployment, node1, node2):
 	start = processing.LatLon(-27.499158, 153.010547)
 	end = processing.LatLon(-27.500826, 153.008367)
 
-	print "bearing: " + str(start.bearingTo(end)) + "degrees"
-	print "distance: " + str(start.distanceTo(end)) + "m"
+	print("bearing: " + str(start.bearingTo(end)) + "degrees")
+	print("distance: " + str(start.distanceTo(end)) + "m")
 
 	bearing = start.bearingTo(end)
 	distanceToTravel = start.distanceTo(end)
@@ -59,24 +60,25 @@ def simulation(deployment, node1, node2):
 			res = deployment.processFrame(node1measurement, node2measurement, 1)
 
 			if (res.valid):
-				rawLocations = np.concatenate((rawLocations, [[res.raw.lon, res.raw.lat]]), axis=0)
-				filteredLocations = np.concatenate((filteredLocations, [[res.filtered.lon, res.filtered.lat]]), axis=0)
-				rawTimeError = np.concatenate((rawTimeError, [[t, carLocation.distanceTo(res.raw)]]), axis=0)
-				filteredTimeError = np.concatenate((filteredTimeError, [[t, carLocation.distanceTo(res.filtered)]]), axis=0)
-				rawDistError = np.concatenate((rawDistError, [[midpoint.distanceTo(res.raw), carLocation.distanceTo(res.raw)]]), axis=0)
-				filteredDistError = np.concatenate((filteredDistError, [[midpoint.distanceTo(res.filtered), carLocation.distanceTo(res.filtered)]]), axis=0)
+			    rawLocations = np.concatenate((rawLocations, [[res.raw.lon, res.raw.lat]]), axis=0)
+			    filteredLocations = np.concatenate((filteredLocations, [[res.filtered.lon, res.filtered.lat]]), axis=0)
+			    rawTimeError = np.concatenate((rawTimeError, [[t, carLocation.distanceTo(res.raw)]]), axis=0)
+			    filteredTimeError = np.concatenate((filteredTimeError, [[t, carLocation.distanceTo(res.filtered)]]), axis=0)
+			    rawDistError = np.concatenate((rawDistError, [[midpoint.distanceTo(res.raw), carLocation.distanceTo(res.raw)]]), axis=0)
+			    filteredDistError = np.concatenate((filteredDistError, [[midpoint.distanceTo(res.filtered), carLocation.distanceTo(res.filtered)]]), axis=0)
+                estimate = VehicleEstimate(latitude=res.raw.lat, longitude=res.raw.lon, latitudeFiltered = res.filtered.lat, longitudeFiltered = res.filtered.lon, Valid=res.valid, Type = "car", FrameNum=globalVal.val)
+                estimate.save()
 
 
-
-			writer.writerow([node1shift, 5,4,3,2,1, 0.0, velocity, 1.0, 1.0, 1.0, 1.0, n, 0])
-			writer.writerow([node2shift, 5,4,3,2,1, 0.0, velocity, 1.0, 1.0, 1.0, 1.0, n, 1])
+			#writer.writerow([node1shift, 5,4,3,2,1, 0.0, velocity, 1.0, 1.0, 1.0, 1.0, n, 0])
+			#writer.writerow([node2shift, 5,4,3,2,1, 0.0, velocity, 1.0, 1.0, 1.0, 1.0, n, 1])
 
 			locations = np.concatenate((locations, [[carLocation.lon, carLocation.lat]]), axis=0)
 			distanceTraveled = distanceTraveled + (velocity*deltaT)
 			t = t + deltaT
 			n = n + 1
 
-	print "Time taken: " + str(t) + "s"
+	print("Time taken: " + str(t) + "s")
 	colours = np.random.rand(locations.shape[0])
 
 	plt.figure()
@@ -161,10 +163,13 @@ def simulation(deployment, node1, node2):
 	plt.show()
 
 
-node1 = processing.Node(-27.499543, 153.009910, 43, 0.3, 48e3)
-node2 = processing.Node(-27.499655, 153.010045, 43, 0.3, 48e3)
+nodes = Node.objects.all()
+node1 = processing.Node(float(nodes[0].latitude), float(nodes[0].longitude), int(nodes[0].Angle), 0.3, 48e3)
+node2 = processing.Node(float(nodes[1].latitude), float(nodes[1].longitude), int(nodes[1].Angle), 0.3, 48e3)
 
-deployment = processing.Deployment(node1, node2,  50)
-deployment.resetKalman(-27.499543, 153.009910, 270, 10)
+deployment = processing.Deployment(node1, node2,  150)
+deployment.resetKalman(float(nodes[0].latitude), float(nodes[1].longitude), 0, 0)
+
+
 
 simulation(deployment, node1, node2)

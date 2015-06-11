@@ -3,8 +3,8 @@
 # http://www.movable-type.co.uk/scripts/latlong-vectors.html#intersection
 import numpy as np
 import csv
-import pybrain
-from pybrain.tools.customxml import NetworkReader
+#import pybrain
+#from pybrain.tools.customxml import NetworkReader
 
 neuralNetworkFilename = 'testNetwork.xml'
 
@@ -299,6 +299,7 @@ class Node():
 		distanceDifference = sampleOffset * (self.speedSound / self.fs)
 		distanceDiffSq = distanceDifference ** 2
 		
+		
 		arrivalAngle = np.float64(np.arctan2(np.sqrt(np.abs(self.micDistSq - distanceDiffSq)), distanceDifference))
 		if (invert):
 			return (self.bearing - arrivalAngle) % (2*np.pi)
@@ -315,7 +316,7 @@ class Deployment():
 		self.radius = detectionRadius
 		self.midpoint = self.node1.location.midpointTo(self.node2.location)
 		self.kalman = Kalman([0.0], [0.0], 0.0, 0.0, self.deltaT)
-		self.classifier = NetworkReader.readFrom(neuralNetworkFilename)
+		#self.classifier = NetworkReader.readFrom(neuralNetworkFilename)
 
 	def resetKalman(self, lat, lon, bearing, velocity):
 		ndim = 4
@@ -337,10 +338,12 @@ class Deployment():
 		# Get source angle with reference to True North
 		angle1 = self.node1.getAngle(maxBin1, False)
 		angle2 = self.node2.getAngle(maxBin2, True)
+		
+		print (str(toDegrees(angle1)) + " " + str(toDegrees(angle2)))
 
 		# Get intersection of angles
 		intersection = self.node1.location.intersection(toDegrees(angle1), self.node2.location, toDegrees(angle2))
-
+		print("intersection: " + str(intersection))
 		#print maxBin1, toDegrees(angle1), maxBin2, toDegrees(angle2)
 		#print intersection
 
@@ -351,7 +354,10 @@ class Deployment():
 
 		#Check that distance falls within acceptable region
 		if (sourceDistance > self.radius):
-			return Results(False, 0, 0, 0)
+		    intersection = LatLon(-intersection.lat, (intersection.lon - 180) % 360)
+		    sourceDistance = self.midpoint.distanceTo(intersection)
+		    if (sourceDistance > self.radius):
+			    return Results(False, 0, 0, 0)
 
 		# Get localisation error for each measured angle
 		# Ignore for now due to inaccuracies, most likely from earth radius value
@@ -371,15 +377,15 @@ class Deployment():
 		self.kalman.updateDeltaTime(self.deltaT * framesSinceLast)
 		self.kalman.update([intersection.lon, intersection.lat, velocityLon, velocityLat])
 
-		node1classification = self.classifier.activate(generateFeatureVector(node1Measurement))
-		node2classification = self.classifier.activate(generateFeatureVector(node2Measurement))
+		#node1classification = self.classifier.activate(generateFeatureVector(node1Measurement))
+		#node2classification = self.classifier.activate(generateFeatureVector(node2Measurement))
 		
 		filteredIntersection = LatLon(self.kalman.x_hat[1], self.kalman.x_hat[0])
 
-		if (node1classification != node2classification):
-			return Results(True, intersection, filteredIntersection, 'No Car')
-		else:
-			return Results(True, intersection, filteredIntersection, categoryToLabel(node1classification))
+		#if (node1classification != node2classification):
+		return Results(True, intersection, filteredIntersection, 'No Car')
+		#else:
+		#	return Results(True, intersection, filteredIntersection, categoryToLabel(node1classification))
 
 
 

@@ -13,7 +13,7 @@ import base64
 
 
 
-import csse4011_api.processing
+import csse4011_api.processing as processing
 
 
 
@@ -44,11 +44,13 @@ def StartTcpClient(request):
     return HttpResponse("client started(probably)")
     
     
-    
+class GlobalValue:
+    def __init__(self):
+        self.val = 0
 
 
 
-def handleFrame(frameNum, frameDataDecoded, f, node_ID):
+def handleFrame(frameNum, frameDataDecoded, f, node_ID, globalVal):
     frameData = []
     word = 0
     for i in range(0, 51):
@@ -70,11 +72,11 @@ def handleFrame(frameNum, frameDataDecoded, f, node_ID):
     validFrame = frameData[0]
     print("validFrame: " + str(frameData[0]));
     
-#    if frameData[1] > 2147483647: #this is a hack
-#        maxBin = -1*(2147483647*2 - frameData[1])
+    if frameData[1] > 2147483647: #this is a hack
+        maxBin = -1*(2147483647*2 - frameData[1])
 
-	if frameData[1] & 0x80000000:
-		 maxBin = -1*(frameData[1] & 0x7FFFFFFF)
+#    if frameData[1] & 0x80000000:
+#	    maxBin = -1*(frameData[1] & 0x7FFFFFFF)
     else:
         maxBin = frameData[1]
     print("maxBin: " + str(maxBin));
@@ -105,6 +107,7 @@ def handleFrame(frameNum, frameDataDecoded, f, node_ID):
     
     frameNumNode = frameData[13]
     print("frameNumNode: " + str(frameNumNode))
+    globalVal.val = frameNumNode
 
     print("Node_ID: " + str(node_ID))
 
@@ -137,9 +140,10 @@ def handleFrame(frameNum, frameDataDecoded, f, node_ID):
     # Kurtosis = kurtosis,
     # Node_ID = node_ID)
     #   frame.save()
-    # nodemeasurement = processing.Measurement(int(maxBin), maxFrequencies, maxValue, power, mean, variance, skew, kurtosis)
-    # print("<processing here> Node_ID: " + str(node_ID))
-    # return nodemeasurement
+    nodemeasurement = processing.Measurement(int(maxBin), maxFrequencies, maxValue, power, mean, variance, skew, kurtosis)
+    print("<processing here> Node_ID: " + str(node_ID))
+    FrameNumGlobal = frameNumNode
+    return nodemeasurement
 
 
 # TODO move this hack elsewhere
@@ -158,13 +162,15 @@ def tcp_client_thread():
 
     #setup processing environment
     nodes = Node.objects.all()
-    # node1 = processing.Node(nodes[0].latitude, node[0].longitude, 43, 0.3, 48e3)
-    # node2 = processing.Node(nodes[1].latitude, node[1].longitude, 43, 0.3, 48e3)
+    node1 = processing.Node(float(nodes[0].latitude), float(nodes[0].longitude), int(nodes[0].Angle), 0.3, 48e3)
+    node2 = processing.Node(float(nodes[1].latitude), float(nodes[1].longitude), int(nodes[1].Angle), 0.3, 48e3)
 
-    # deployment = processing.Deployment(node1, node2,  50)
-    # deployment.resetKalman(nodes[0].latitude, nodes[1].longitude, 0, 0)
-
-    lastFrameComplete = -1;
+    deployment = processing.Deployment(node1, node2,  150)
+    deployment.resetKalman(float(nodes[0].latitude), float(nodes[1].longitude), 0, 0)
+    
+    globalVal = GlobalValue()
+    
+    lastFrameComplete = 0;
 
     while(True):
         data = sock.recv(1000)
@@ -195,9 +201,9 @@ def tcp_client_thread():
             
         for a in range(0, int(len(decoded)/51)): 
             if node_ID == 0:
-                node0measurements.append(handleFrame(a, decoded[51*a:51*a+51], f, node_ID))
+                node0measurements.append(handleFrame(a, decoded[51*a:51*a+51], f, node_ID, globalVal))
             elif node_ID == 1:
-                node1measurements.append(handleFrame(a, decoded[51*a:51*a+51], f, node_ID))
+                node1measurements.append(handleFrame(a, decoded[51*a:51*a+51], f, node_ID, globalVal))
             else:
                 print("INVALID NODE_ID: " + str(node_ID))
             
@@ -205,6 +211,29 @@ def tcp_client_thread():
         # find two  
         print("node0measurements - length: " + str(len(node0measurements)))
         print("node1measurements - length: " + str(len(node1measurements)))
+
+        for i in range(lastFrameComplete, len(node0measurements)):
+            res = deployment.processFrame(node0measurements[i], node0measurements[i], 1)
+            print("Valid result: " + str(res.valid))
+            lastFrameComplete = i
+            
+            if (res.valid):
+                print("VALID---------------<<<<<<<<")
+                print("lat: " + str(res.raw.lat))
+                print("lon: " + str(res.raw.lon))
+                print("latF: " + str(res.filtered.lat))
+                print("lonF: " + str(res.filtered.lon))
+                print("frameNum: " + str(globalVal.val))
+                estimate = VehicleEstimate(latitude=res.raw.lat,
+                    longitude=res.raw.lon,
+                    latitudeFiltered = res.filtered.lat,
+                    longitudeFiltered = res.filtered.lon,
+                    Valid=res.valid,
+                    Type = "car",
+                    FrameNum=globalVal.val)
+                estimate.save()
+            
+
 
         #find next frame to process in node0measuermens
         #find comparable frame in node1measurements
