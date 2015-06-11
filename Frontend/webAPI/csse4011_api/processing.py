@@ -339,6 +339,8 @@ class Deployment():
 		angle1 = self.node1.getAngle(maxBin1, False)
 		angle2 = self.node2.getAngle(maxBin2, True)
 		
+		print("angle1: " + str(angle1))
+		print("angle2: " + str(angle2))
 		print (str(toDegrees(angle1)) + " " + str(toDegrees(angle2)))
 
 		# Get intersection of angles
@@ -358,7 +360,7 @@ class Deployment():
 		    sourceDistance = self.midpoint.distanceTo(intersection)
 		    if (sourceDistance > self.radius):
 			    return Results(False, 0, 0, 0)
-
+		print("new intersection: " + str(intersection))
 		# Get localisation error for each measured angle
 		# Ignore for now due to inaccuracies, most likely from earth radius value
 		#error1 = errorModel(angle1)

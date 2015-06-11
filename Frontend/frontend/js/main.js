@@ -121,7 +121,7 @@ var carEstimates = []
 var carsDrawn = []
 var showEstimates = 1;
 var showFilteredEstimates = 1;
-
+var numDrawn = 0;
 
 function pollForCars() {    // undo this hack
 	$.getJSON( "http://127.0.0.1:8000/csse4011_api/VehicleEstimates/" + lastFrame + "/", addCars);
@@ -133,14 +133,18 @@ function addCars(data) {
 		carEstimates.push(estimate);
 		console.log("car added - Frame: " + estimate.FrameNum);
 		lastFrame=estimate.FrameNum;
-
-		drawCars();
+        console.log("latitude: " + estimate.latitude);
+        console.log("longitude: " + estimate.longitude);
+        drawEstimate(0, estimate);
+        drawEstimate(1, estimate);
+		//drawCars();
 	});
 }
 
 
 function drawCars() {
 	$.each(carEstimates, function( key, estimate) {
+	    
 		if (showEstimates && carsDrawn.indexOf(estimate.FrameNum) < 0) {
 			drawEstimate(0, estimate);
 		}

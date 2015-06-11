@@ -14,7 +14,7 @@ import base64
 
 
 import csse4011_api.processing as processing
-
+import csse4011_api.testProcessing as simulation
 
 
 #views here
@@ -40,7 +40,9 @@ def VehicleEstimates(request, timeStamp):
     return HttpResponse(output)
     
 def StartTcpClient(request):
+    VehicleEstimate.objects.all().delete()
     _thread.start_new_thread(tcp_client_thread, ())
+    _thread.start_new_thread(simulation_thread, ())
     return HttpResponse("client started(probably)")
     
     
@@ -48,7 +50,8 @@ class GlobalValue:
     def __init__(self):
         self.val = 0
 
-
+def simulation_thread():
+    simulation.runSimulation()
 
 def handleFrame(frameNum, frameDataDecoded, f, node_ID, globalVal):
     frameData = []
